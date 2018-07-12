@@ -1,5 +1,8 @@
-from random import randint
 from enum import Enum
+from random import randint
+import time
+import argparse
+from typing import List
 
 
 class CebStatus(Enum):
@@ -11,8 +14,13 @@ class CebStatus(Enum):
     ERREUR = 5
 
 
+MAXINT = 99999999
+
+
 class CebBase:
-    def __init__(self, v):
+    _value: int
+
+    def __init__(self, v: int):
         self._value = v
 
     @property
@@ -20,11 +28,15 @@ class CebBase:
         return self._value
 
     @value.setter
-    def value(self, v):
+    def value(self, v: int):
         self._value = v
 
+    @property
+    def path(self) -> int:
+        return 0
 
-class CebPlaque (CebBase):
+
+class CebPlaque(CebBase):
     def __init__(self, v):
         super().__init__(v)
         # self.value = v
@@ -33,12 +45,24 @@ class CebPlaque (CebBase):
         return str(self.value)
 
     @property
-    def path(self):
+    def path(self) -> int:
         return 1
+
+    def __eq__(self, other):
+        if not isinstance(other, CebPlaque):
+            return False
+        return self.value == other.value
+
+    def __repr__(self):
+        return str(self.value)
 
 
 class CebOperation(CebBase):
-    def __init__(self, g, op, d):
+    _gauche: CebBase
+    _droite: CebBase
+    _operation: str
+
+    def __init__(self, g: CebBase, op: str, d: CebBase):
         super().__init__(0)
         if isinstance(g, int):
             self._gauche = CebPlaque(g)
@@ -71,7 +95,7 @@ class CebOperation(CebBase):
         return 0
 
     @property
-    def gauche(self):
+    def gauche(self) -> CebBase:
         return self._gauche
 
     @gauche.setter
@@ -79,7 +103,11 @@ class CebOperation(CebBase):
         self._gauche = v
 
     @property
-    def droite(self):
+    def droite(self) -> CebBase:
+        """
+
+        :rtype: int
+        """
         return self._droite
 
     @droite.setter
@@ -87,7 +115,7 @@ class CebOperation(CebBase):
         self._droite = v
 
     @property
-    def operation(self):
+    def operation(self) -> str:
         return self._operation
 
     @operation.setter
@@ -95,21 +123,14 @@ class CebOperation(CebBase):
         self._operation = v
 
     @property
-    def path(self):
+    def path(self) -> int:
         return self.gauche.path + self.droite.path
 
     def __eq__(self, other):
-        if not isinstance(other, CebOperation):
-            return False
-        if self._value != other.value:
-            return False
-        if self._operation != other.operation:
-            return False
-        if self.gauche == other.gauche and self.droite == other.droite:
+        if str(self) == str(other):
             return True
-        if self.gauche == other.droite and self.droite == other.gauche:
-            return True
-        return False
+        else:
+            return False
 
     def __str__(self):
         result = ""
@@ -125,6 +146,9 @@ class CebOperation(CebBase):
                                          self.operation, self.droite.value, self.value)
         return result
 
+    def __repr__(self):
+        return str(self)
+
 
 listePlaques = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
                 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
@@ -134,7 +158,7 @@ class CebFind:
     def __init__(self):
         self._found1 = 0
         self._found2 = -1
-        self.Init(999999)
+        self.init(MAXINT)
 
     @property
     def found1(self):
@@ -160,30 +184,35 @@ class CebFind:
     def __str__(self):
         if self.isunique:
             return str(self._found1)
-
-        return format("{} et {}", self._found1, self._found2)
+        return "{} et {}".format(self._found1, self._found2)
 
     def __repr__(self):
         return str(self)
 
-    def Init(self, value):
+    def init(self, value):
         self._found1 = value
         self._found2 = -1
 
 
 class CebTirage:
+    _diff: int
+    _solutions: List[CebBase]
+    _status: CebStatus
+    _found: CebFind
+    _search: int
+    _plaques: List[CebPlaque]
+
     def __init__(self):
         self._plaques = []
         self._search = 0
         self._found = CebFind()
-        self._status = CebStatus.VALID
-        self._solutions = []
-        self._diff = 9999999
         self.rand()
 
     def clear(self):
         self._solutions = []
-        self._found.Init(99999999)
+        self._diff = MAXINT
+        self._found.init(MAXINT)
+        self.valid()
 
     @property
     def found(self):
@@ -193,14 +222,24 @@ class CebTirage:
     def search(self):
         return self._search
 
+    @search.setter
+    def search(self, value):
+        self._search = value
+        self.clear()
+
     def rand(self):
+        self.clear()
         self._search = randint(100, 999)
         ll = listePlaques[:]
         self._plaques[:] = []
-        for i in range(0, 6):
-            v = randint(0, len(ll)-1)
+        for ix in range(0, 6):
+            v = randint(0, len(ll) - 1)
             self._plaques.append(CebPlaque(ll[v]))
             del ll[v]
+
+    @property
+    def count(self) -> int:
+        return len(self.solutions)
 
     @property
     def solutions(self):
@@ -226,51 +265,106 @@ class CebTirage:
                 self._plaques.append(CebPlaque(p))
             else:
                 self._plaques.append(p)
+        self.clear()
 
-    def addsolution(self, s):
-        diff = abs(s.value - self._search)
+    def addsolution(self, sol: CebBase):
+        diff = abs(sol.value - self._search)
         if diff > self._diff:
             return
         if diff != self._diff:
-            self._solutions = [s]
-            self._found.Init(s.value)
+            self._solutions = [sol]
+            self._found.init(sol.value)
             self._diff = diff
             return
-        for sl in self._solutions:
-            if s == sl:
-                return
-        self._solutions.append(s)
-        self._found.add(s.value)
+        if sol in self._solutions:
+            return
+        self._solutions.append(sol)
+        self._found.add(sol.value)
 
     def resolve_args(self, search, plaques):
-        self.clear()
         self._search = search
         self.plaques = plaques
-        self.resolve()
+        return self.resolve()
 
     def resolve(self):
         self.clear()
+        if self.status == CebStatus.ERREUR:
+            return
+        self._status = CebStatus.ENCOURS
         self._resolve(self.plaques[:])
-        self._solutions.sort(key=lambda s: s.path)
+        self._solutions.sort(key=lambda sol: sol.path)
+        if self.solutions[0].value == self._search:
+            self.status = CebStatus.COMPTEESTBON
+        else:
+            self.status = CebStatus.COMPTEAPPROCHE
+        return self._status
+
+    def valid(self):
+        if self._search < 100 or self._search > 999:
+            self.status = CebStatus.ERREUR
+            return
+        if len(self.plaques) > 6:
+            self.status = CebStatus.ERREUR
+            return
+        for v in self._plaques:
+            n = self._plaques.count(v)
+            kk = listePlaques.count(v.value)
+            if n > kk or kk == 0:
+                self.status = CebStatus.ERREUR
+                return
+        self.status = CebStatus.VALID
+
+    @property
+    def solution(self) -> CebBase:
+        if self.count == 0:
+            return None
+        else:
+            return self.solutions[0]
 
     def _resolve(self, plaq):
         pl = sorted(plaq, key=lambda p: p.value, reverse=True)
-        for i in range(0, len(pl)):
-            self.addsolution(pl[i])
-            for j in range(i+1, len(pl)):
+        for ix in range(0, len(pl)):
+            self.addsolution(pl[ix])
+            for j in range(ix + 1, len(pl)):
                 for op in ["x", "+", "/", "-"]:
-                    re = CebOperation(pl[i], op, pl[j])
+                    re = CebOperation(pl[ix], op, pl[j])
                     if re.value != 0:
                         ls = [re]
                         for k in range(0, len(pl)):
-                            if k != i and k != j:
+                            if k != ix and k != j:
                                 ls.append(pl[k])
                         self._resolve(ls)
 
 
 if __name__ == "__main__":
-    tirage = CebTirage()
-    tirage.resolve_args(234, [1, 3, 5, 7, 9, 25])
-    print("Trouvé: {}, Nombre de solutions: {}".format(tirage.found, len(tirage.solutions)))
-    for s in tirage.solutions:
-        print("path: {}, solution: {}".format(s.path, s))
+    def main():
+        tirage = CebTirage()
+        parser = argparse.ArgumentParser(description="Compte est bon")
+        parser.add_argument("-p", "--plaques", type=int, nargs="+", help="plaques")
+        parser.add_argument("-s", "--search", dest="search", help="Valeur", type=int)
+        args = parser.parse_args()
+        if args.search is not None:
+            tirage.search = args.search
+        if args.plaques is not None:
+            tirage.plaques = args.plaques[0:6]
+        ti = time.time()
+        tirage.resolve()
+        ti = time.time() - ti
+        print("#### Tirage du compte est bon#### ")
+        print("Recherche: {}".format(tirage.search), end=", ")
+        print("Tirage:", end=" ")
+        for pp in tirage.plaques:
+            print(pp.value, end=" ")
+        print()
+        if tirage.status == CebStatus.COMPTEESTBON:
+            print("Le Compte est bon")
+        elif tirage.status == CebStatus.ERREUR:
+            print("Tirage invalide")
+        else:
+            print("Compte approché: ", tirage.found)
+        print("Durée du calcul: {} s, nombre de solutions: {}".format(ti, tirage.count))
+        if tirage.count > 0:
+            print("Solutions: ")
+            for s in tirage.solutions:
+                print(s)
+    main()

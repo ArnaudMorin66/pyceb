@@ -20,10 +20,12 @@ MAXINT = 99999999
 class CebBase:
     _value: int
     _list: List[str]
+    _path:0
 
     def __init__(self, v: int):
         self._value = v
         self._list = []
+        self._path = 0
 
     @property
     def value(self):
@@ -35,7 +37,7 @@ class CebBase:
 
     @property
     def path(self) -> int:
-        return 0
+        return self._path
 
     @property
     def list(self):
@@ -46,13 +48,10 @@ class CebPlaque(CebBase):
     def __init__(self, v):
         super().__init__(v)
         self._list = [str(v)]
+        self._path = 1
 
     def __str__(self):
         return str(self.value)
-
-    @property
-    def path(self) -> int:
-        return 1
 
     def __eq__(self, other):
         if not isinstance(other, CebPlaque):
@@ -64,88 +63,41 @@ class CebPlaque(CebBase):
 
 
 class CebOperation(CebBase):
-    _gauche: CebBase
-    _droite: CebBase
-    _operation: str
 
     def __init__(self, g: Union[CebBase, int], op: str, d: Union[CebBase, int]):
         super().__init__(0)
         if isinstance(g, int):
-            self._gauche = CebPlaque(g)
-        else:
-            self._gauche = g
-        self._operation = op
+            g = CebPlaque(g)
         if isinstance(d, int):
             self._droite = CebPlaque(d)
-        else:
-            self._droite = d
-        self.value = self._eval
+        self._eval(g, op, d)
+
+    # @property
+    def _eval(self, g, op, d):
+        self._value = 0
+        if op == "+":
+            self._value = g.value + d.value
+        elif op == "-":
+            if g.value > d.value:
+                self._value = g.value - d.value
+        elif op == "x":
+            if g.value > 1 and d.value > 1:
+                self._value = g.value * d.value
+        elif op == "/":
+            if d.value > 1:
+                tmp = divmod(g.value, d.value)
+                if tmp[1] == 0:
+                    self._value =  tmp[0]
         self._list.clear()
-
-    @property
-    def _eval(self):
-        if self._operation == "+":
-            return self._gauche.value + self._droite.value
-        elif self._operation == "-":
-            if self._gauche.value < self._droite.value:
-                return 0
-            return self._gauche.value - self._droite.value
-        elif self._operation == "x":
-            if self._gauche.value <= 1 or self._droite.value <= 1:
-                return 0
-            return self._gauche.value * self._droite.value
-        elif self._operation == "/":
-            if self._droite.value <= 1:
-                return 0
-            tmp = divmod(self._gauche.value, self._droite.value)
-            if tmp[1] == 0:
-                return tmp[0]
-            return 0
-        return 0
-
-    @property
-    def gauche(self) -> CebBase:
-        return self._gauche
-
-    @gauche.setter
-    def gauche(self, v):
-        self._gauche = v
-
-    @property
-    def droite(self) -> CebBase:
-        return self._droite
-
-    @droite.setter
-    def droite(self, v):
-        self._droite = v
-
-    @property
-    def operation(self) -> str:
-        return self._operation
-
-    @operation.setter
-    def operation(self, v):
-        self._operation = v
-
-    @property
-    def path(self) -> int:
-        return self.gauche.path + self.droite.path
+        if isinstance(g, CebOperation):
+            self._list += g.list
+        if isinstance(d, CebOperation):
+            self._list += d.list
+        self._list.append(f"{g.value} {op} {d.value} = {self._value}")
+        self._path = g._path + d._path
 
     def __eq__(self, other):
         return self.list == other.list
-
-    @property
-    def list(self)-> List[str]:
-        if len( self._list) == 0:
-            self._evallist()
-        return self._list
-
-    def _evallist(self):
-        if isinstance(self.gauche, CebOperation):
-            self._list += self.gauche.list
-        if isinstance(self.droite, CebOperation):
-            self._list += self.droite.list
-        self._list.append( f"{self.gauche.value} {self.operation} {self.droite.value} = {self.value}")
 
     def __str__(self):
         return ';'.join(self.list)

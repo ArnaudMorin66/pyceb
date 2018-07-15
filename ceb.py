@@ -19,12 +19,12 @@ MAXINT = 99999999
 
 class CebBase:
     _value: int
-    _list: List[str]
-    _path:0
+    _str: str
+    _nplaques:0
 
     def __init__(self, v: int):
         self._value = v
-        self._list = []
+        self._str = ""
         self._path = 0
 
     @property
@@ -36,19 +36,22 @@ class CebBase:
         self._value = v
 
     @property
-    def path(self) -> int:
-        return self._path
+    def nplaques(self) -> int:
+        return self._nplaques
 
     @property
-    def list(self):
-        return self._list
+    def str(self):
+        return self._str
+
+    def __str__(self):
+        return self._str
 
 
 class CebPlaque(CebBase):
     def __init__(self, v):
         super().__init__(v)
-        self._list = [str(v)]
-        self._path = 1
+        self._str = str(v)
+        self._nplaques = 1
 
     def __str__(self):
         return str(self.value)
@@ -88,23 +91,23 @@ class CebOperation(CebBase):
                 tmp = divmod(g.value, d.value)
                 if tmp[1] == 0:
                     self._value =  tmp[0]
-        self._list.clear()
+        self._str = ""
         if isinstance(g, CebOperation):
-            self._list += g.list
+            self._str += g._str
         if isinstance(d, CebOperation):
-            self._list += d.list
-        self._list.append(f"{g.value} {op} {d.value} = {self._value}")
-        self._path = g._path + d._path
+            if self._str != "":
+                self._str += ";"
+            self._str += d._str
+        if self._str != "":
+            self._str += ";"
+        self._str += f"{g.value} {op} {d.value} = {self._value}"
+        self._nplaques = g.nplaques + d._nplaques
 
     def __eq__(self, other):
-        return self.list == other.list
-
-    def __str__(self):
-        return ';'.join(self.list)
+        return self._str == other.str
 
     def __repr__(self):
-        return str(self)
-
+        return self._str
 
 
 class CebFind:
@@ -270,7 +273,7 @@ class CebTirage:
             return self._status
         self._status = CebStatus.ENCOURS
         self._resolve(self.plaques[:])
-        self._solutions.sort(key=lambda sol: sol.path)
+        self._solutions.sort(key=lambda sol: sol.nplaques)
         if self.solutions[0].value == self._search:
             self.status = CebStatus.COMPTEESTBON
         else:

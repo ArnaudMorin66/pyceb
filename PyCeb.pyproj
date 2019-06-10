@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>1cc73550-4c46-4379-b63d-cc19eb8a01b8</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>Ceb.py</StartupFile>
+    <StartupFile>main.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -12,6 +12,7 @@
     <Name>PyCeb</Name>
     <RootNamespace>PyCeb</RootNamespace>
     <IsWindowsApplication>False</IsWindowsApplication>
+    <InterpreterId>Global|PythonCore|3.7</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,7 +23,16 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="ceb.py" />
+    <Compile Include="main.py" />
+    <Compile Include="PyCeb\Ceb.py" />
+    <Compile Include="PyCeb\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="PyCeb\" />
+    <Folder Include="PyCeb\__pycache__\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="Global|PythonCore|3.7" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

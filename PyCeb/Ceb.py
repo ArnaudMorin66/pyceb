@@ -1,11 +1,9 @@
-import argparse
-import time
-from enum import IntEnum
+from enum import Enum
 from random import randint
 from typing import List, Union
 
 
-class CebStatus(IntEnum):
+class CebStatus(Enum):
     INDEFINI = 0,
     VALID = 1,
     ENCOURS = 2,
@@ -20,12 +18,12 @@ MAXINT = 99999999
 class CebBase:
     _value: int
     _str: str
-    _nplaques:0
+    _rank: int
 
     def __init__(self, v: int):
         self._value = v
         self._str = ""
-        self._path = 0
+        self._rank = 0
 
     @property
     def value(self):
@@ -36,8 +34,8 @@ class CebBase:
         self._value = v
 
     @property
-    def nplaques(self) -> int:
-        return self._nplaques
+    def rank(self) -> int:
+        return self._rank
 
     @property
     def str(self):
@@ -51,7 +49,7 @@ class CebPlaque(CebBase):
     def __init__(self, v):
         super().__init__(v)
         self._str = str(v)
-        self._nplaques = 1
+        self._rank = 1
 
     def __str__(self):
         return str(self.value)
@@ -63,6 +61,9 @@ class CebPlaque(CebBase):
 
     def __repr__(self):
         return str(self.value)
+
+    def __int__(self):
+        return self._value
 
 
 class CebOperation(CebBase):
@@ -101,7 +102,7 @@ class CebOperation(CebBase):
         if self._str != "":
             self._str += ";"
         self._str += f"{g.value} {op} {d.value} = {self._value}"
-        self._nplaques = g.nplaques + d._nplaques
+        self._rank = g._rank + d._rank
 
     def __eq__(self, other):
         return self._str == other.str
@@ -190,10 +191,12 @@ class CebTirage:
         self._search = randint(100, 999)
         ll = self.listePlaques[:]
         self._plaques[:] = []
-        for i in range(0, 6):
+       
+        while len(self._plaques) < 6:
             v = randint(0, len(ll) - 1)
             self._plaques.append(CebPlaque(ll[v]))
             del ll[v]
+        self.valid()
 
     @property
     def diff(self):
@@ -262,7 +265,7 @@ class CebTirage:
             self._solutions.append(sol)
             self._found.add(sol.value)
 
-    def resolve_args(self, search: int, plaques):
+    def resolve_args(self, plaques, search:int):
         self._search = search
         self.plaques = plaques
         return self.resolve()
@@ -273,7 +276,7 @@ class CebTirage:
             return self._status
         self._status = CebStatus.ENCOURS
         self._resolve(self.plaques[:])
-        self._solutions.sort(key=lambda sol: sol.nplaques)
+        self._solutions.sort(key=lambda sol: sol.rank)
         if self.solutions[0].value == self._search:
             self.status = CebStatus.COMPTEESTBON
         else:
@@ -291,38 +294,6 @@ class CebTirage:
                     if re.value != 0:
                         self._resolve([x for k, x in enumerate(pl) if k != i and k != j] + [re])
 
-
-if __name__ == "__main__":
-    def main():
-        tirage = CebTirage()
-        parser = argparse.ArgumentParser(description="Compte est bon")
-        parser.add_argument("-p", "--plaques", type=int, nargs="+", help="plaques")
-        parser.add_argument("-s", "--search", dest="search", help="Valeur", type=int)
-        args = parser.parse_args()
-        if args.search is not None:
-            tirage.search = args.search
-        if args.plaques is not None:
-            tirage.plaques = args.plaques[0:6]
-        ti = time.time()
-        tirage.resolve()
-        ti = time.time() - ti
-        print("#### Tirage du compte est bon#### ")
-        print(f"Recherche: {tirage.search}", end=", ")
-        print("Tirage:", end=" ")
-        for pp in tirage.plaques:
-            print(pp.value, end=" ")
-        print()
-        if tirage.status == CebStatus.COMPTEESTBON:
-            print("Le Compte est bon")
-        elif tirage.status == CebStatus.ERREUR:
-            print("Tirage invalide")
-        else:
-            print("Compte approché: ", tirage.found)
-        print(f"Durée du calcul: {ti} s, nombre de solutions: {tirage.count}")
-        if tirage.count > 0:
-            print("Solutions: ")
-            for s in tirage.solutions:
-                print(s)
-
-
-    main()
+    def __repr__(self):
+        return f"Plaques: {self.plaques}, Recherche: {self.search}, Status: {str(self.status)}, " \
+               f"Found: {self.found}, Nb solutions: {self.count}, Solutions: {self.solutions}"

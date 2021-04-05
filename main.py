@@ -1,5 +1,6 @@
 import argparse
 import time
+import pickle
 from PyCeb import *
 
 print("#### Tirage du compte est bon#### ")
@@ -31,3 +32,13 @@ print(f"Nombre d'opérations: {tirage.noperations}")
 if tirage.count > 0:
     print("Solutions: ")
     print(*tirage.solutions, sep='\n')
+with open("tirage.data", "wb") as fs:
+    p = pickle.Pickler(fs)
+    p.dump(tirage)
+    # fs.write(pickle.dumps(tirage))
+with open("tirage.data", "rb") as fr:
+    data: CebTirage = pickle.loads(fr.read())
+print(data)
+data.rand()
+data.resolve()
+print(*data.solutions, sep="\n")

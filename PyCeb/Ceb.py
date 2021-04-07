@@ -1,6 +1,6 @@
 from enum import Enum
 from random import randint
-from typing import List, Optional
+from typing import List
 
 
 class CebStatus(Enum):
@@ -64,10 +64,6 @@ class CebOperation(CebBase):
         super().__init__()
         if g._value < d._value:
             g, d = d, g
-        self._eval(g, op, d)
-
-    # @property
-    def _eval(self, g: CebBase, op: str, d: CebBase):
         self._value = 0
         if op == "+":
             self._value = g._value + d._value
@@ -77,10 +73,10 @@ class CebOperation(CebBase):
             if g._value > 1 and d._value > 1:
                 self._value = g._value * d._value
         elif op == "/":
-            if d._value > 1:
+            if d.value > 1:
                 tmp = divmod(g._value, d._value)
                 if tmp[1] == 0:
-                    self._value = tmp[0]
+                    self._value = tmp[0] if tmp[1] == 0 else 0
         if self._value == 0:
             return
         self._operations.clear()
@@ -148,30 +144,39 @@ class CebTirage:
     _nop: int
     _plaques: List[CebPlaque]
 
-    def __init__(self):
-        self._plaques = []
-        self._search = 0
+    # noinspection PyDefaultArgument
+    def __init__(self, search: int = 0, plaques: List[int] = []):
+        self._plaques: List[CebPlaque] = []
+        for i, k in enumerate(plaques):
+            self._plaques.append(CebPlaque(k))
+        self._search = search
         self._found = CebFind()
+        self._solutions = []
+        self._diff = 0
         self._nop = 0
-        self.rand()
+        if search != 0 or len(plaques) > 0:
+            self.valid()
+        else:
+            self.rand()
 
-    def clear(self):
+    def clear(self) -> CebStatus:
         self._nop = 0
         self._solutions = []
         self._diff = MAXINT
         self._found.init(MAXINT)
         self.valid()
+        return self.status
 
     @property
     def noperations(self) -> int:
         return self._nop
 
     @property
-    def found(self):
+    def found(self) -> CebFind:
         return self._found
 
     @property
-    def search(self):
+    def search(self) -> int:
         return self._search
 
     @search.setter
@@ -193,7 +198,7 @@ class CebTirage:
         return self.status
 
     def _getstr(self) -> str:
-        return "[" + "], [".join([", ".join(x.operations) for k, x in enumerate(self._solutions)]) + "]"
+        return "{" + "}, {".join([", ".join(x.operations) for k, x in enumerate(self._solutions)]) + "}"
 
     @property
     def diff(self):
@@ -204,19 +209,19 @@ class CebTirage:
         return len(self.solutions)
 
     @property
-    def solutions(self):
+    def solutions(self) -> List[CebBase]:
         return self._solutions
 
     @property
-    def status(self):
+    def status(self) -> CebStatus:
         return self._status
 
     @status.setter
-    def status(self, value):
+    def status(self, value: CebStatus):
         self._status = value
 
     @property
-    def plaques(self):
+    def plaques(self) -> List[CebPlaque]:
         return self._plaques
 
     @plaques.setter
@@ -245,7 +250,7 @@ class CebTirage:
         return self.status
 
     @property
-    def solution(self) -> Optional[CebBase]:
+    def solution(self) -> CebBase:
         if self.count == 0:
             return None
         else:
@@ -270,6 +275,10 @@ class CebTirage:
         return self.resolve()
 
     def resolve(self) -> CebStatus:
+        """
+
+        :rtype: object
+        """
         self.clear()
         if self.status == CebStatus.ERREUR:
             return self._status
@@ -282,7 +291,7 @@ class CebTirage:
             self.status = CebStatus.COMPTEAPPROCHE
         return self._status
 
-    def _resolve(self, plaq: List[CebBase]):
+    def _resolve(self, plaq: List[CebBase]) -> None:
         """
         :type plaq: List[CebBase]
         """
@@ -296,6 +305,14 @@ class CebTirage:
                     if re.value != 0:
                         self._resolve([x for k, x in enumerate(
                             plaq) if k != i and k != j] + [re])
+
+    @property
+    def result(self):
+        return self.status, self.found, self.solutions
+
+    @property
+    def data(self):
+        return self.search, self.plaques
 
     def __repr__(self):
         return f"Plaques: {self.plaques.__repr__()}, " \

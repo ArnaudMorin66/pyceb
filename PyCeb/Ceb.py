@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import Enum
 from random import randint
 from typing import List
@@ -134,8 +135,9 @@ class CebFind:
 
 
 class CebTirage:
-    listePlaques: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
+    ListePlaques: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
+    PlaquesUniques = list(set(ListePlaques))
     _diff: int
     _solutions: List[CebBase]
     _status: CebStatus
@@ -145,14 +147,14 @@ class CebTirage:
     _plaques: List[CebPlaque]
 
     # noinspection PyDefaultArgument
-    def __init__(self, search: int = 0, plaques: List[int] = []):
+    def __init__(self, plaques: List[int] = (), search: int = 0):
         self._plaques: List[CebPlaque] = []
-        for i, k in enumerate(plaques):
+        for _, k in enumerate(plaques):
             self._plaques.append(CebPlaque(k))
         self._search = search
         self._found = CebFind()
         self._solutions = []
-        self._diff = 0
+        self._diff = MAXINT
         self._nop = 0
         if search != 0 or len(plaques) > 0:
             self.valid()
@@ -187,10 +189,9 @@ class CebTirage:
     def rand(self) -> CebStatus:
         self.clear()
         self._search = randint(100, 999)
-        ll = self.listePlaques[:]
+        ll = CebTirage.ListePlaques[:]
         self._plaques[:] = []
-
-        while len(self._plaques) < 6:
+        for _ in range(6):
             v = randint(0, len(ll) - 1)
             self._plaques.append(CebPlaque(ll[v]))
             del ll[v]
@@ -242,7 +243,7 @@ class CebTirage:
             self.status = CebStatus.ERREUR
             return self.status
         for p in self._plaques:
-            kk = self.listePlaques.count(p.value)
+            kk = CebTirage.ListePlaques.count(p.value)
             if self._plaques.count(p) > kk or kk == 0:
                 self.status = CebStatus.ERREUR
                 return self.status
@@ -269,19 +270,17 @@ class CebTirage:
             self._solutions.append(sol)
             self._found.add(sol.value)
 
-    def resolve_args(self, plaques: List[int], search: int) -> CebStatus:
-        self._search = search
-        self.plaques = plaques
-        return self.resolve()
-
-    def resolve(self) -> CebStatus:
+    def resolve(self, plaques: List[int] = (), search: int = 0) -> CebTirage:
         """
 
         :rtype: object
         """
+        if search != 0 and len(plaques) == 6:
+            self._search = search
+            self.plaques = plaques
         self.clear()
         if self.status == CebStatus.ERREUR:
-            return self._status
+            return self
         self._status = CebStatus.ENCOURS
         self._resolve(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
@@ -289,7 +288,7 @@ class CebTirage:
             self.status = CebStatus.COMPTEESTBON
         else:
             self.status = CebStatus.COMPTEAPPROCHE
-        return self._status
+        return self
 
     def _resolve(self, plaq: List[CebBase]) -> None:
         """
@@ -319,3 +318,7 @@ class CebTirage:
                f"Recherche: {self.search.__repr__()}, Status: {str(self.status)}, " \
                f"Found: {self.found.__repr__()}, Nb solutions: {self.count.__repr__()}, " \
                f"Solutions: {self._getstr()}"
+
+
+if __name__ == "__main__":
+    print(CebTirage().resolve())

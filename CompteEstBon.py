@@ -1,6 +1,14 @@
 import argparse
 import time
+
 from PyCeb import CebTirage, CebStatus
+
+
+def exec_time(fn):
+    t = time.time()
+    fn()
+    return time.time() - t
+
 
 print("#### Tirage du compte est bon#### ")
 parser = argparse.ArgumentParser(description="Compte est bon")
@@ -14,19 +22,18 @@ tirage = CebTirage(args.plaques, args.search)
 print(f"Recherche: {tirage.search}", end=", ")
 print("Tirage:", end=" ")
 print(*tirage.plaques, sep=', ')
-ti = time.time()
-tirage.resolve()
-ti = time.time() - ti
+ti = exec_time(tirage.resolve)
 print()
+
 if tirage.status == CebStatus.COMPTEESTBON:
     print("Le Compte est bon")
 elif tirage.status == CebStatus.ERREUR:
     print("Tirage invalide")
 else:
     print("Compte approché: ", tirage.found)
-print(f"Durée du calcul: {ti} s, nombre de solutions: {tirage.count}")
-print(f"Nombre d'opérations: {tirage.noperations}")
+print(f"Durée du calcul: {ti:.3f} s, nombre de solutions: {tirage.count}")
+print(f"Nombre d'opérations: {tirage.noperations:> 20_}")
 if tirage.count > 0:
     print("Solutions: ")
     for i, s in enumerate(tirage.solutions):
-        print(f"{i + 1:04}→ {s}")
+        print(f"{i + 1:4}: {s}")

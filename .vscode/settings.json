@@ -16,5 +16,6 @@
         "IPython"
     ],
     "python.linting.pylintEnabled": true,
-    "python.languageServer": "Pylance"
+    "python.languageServer": "Pylance",
+    "git.ignoreLimitWarning": true
 }

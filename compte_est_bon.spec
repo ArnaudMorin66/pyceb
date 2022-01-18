@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['compte_est_bon.py'],
-             pathex=['C:\\Users\\arnaud\\Source\\python\\pyceb'],
+             pathex=[],
              binaries=[],
              datas=[],
              hiddenimports=[],

@@ -1,10 +1,26 @@
+import pyjion
 import argparse
 import json
 import os
+import pickle
+import sys
+import tempfile
 import time
+from datetime import datetime
+from pymongo import MongoClient, database
 from argparse import ArgumentParser
 from zipfile import ZipFile, ZIP_LZMA
 from pyceb import CebTirage, CebStatus
+
+pyjion.enable()
+
+
+def export_to_mongodb(server: str, tir: CebTirage):
+    client: MongoClient = MongoClient(server)
+    db: database = client.ceb
+    domaine: str = os.getenv("USERDOMAIN" if sys.platform == "win32" else "HOST")
+    db.comptes.insert_one({"_id": {"lang": "python", "domain": domaine, "date": datetime.utcnow()}} | tir.result)
+
 
 parser: ArgumentParser = argparse.ArgumentParser(description="Compte est bon")
 parser.add_argument("-p", "--plaques", nargs="+",
@@ -16,6 +32,9 @@ parser.add_argument("-j", "--json", dest="extract_json", type=bool,
                     help="affichage du tirage", default=False)
 parser.add_argument('integers', metavar='N', type=int, nargs='*',
                     help='plaques & valeur à chercher')
+parser.add_argument("-S", "--save", dest="save_data", type=bool,
+                    action=argparse.BooleanOptionalAction,
+                    help="Sauvegarde du tirage", default=None)
 args = parser.parse_args()
 
 tirage: CebTirage = CebTirage()
@@ -27,15 +46,19 @@ if args.search != 0:
     tirage.search = args.search
 
 if len(args.integers) > 5:
-    tirage.plaques = args.integers[0:6]
-    if len(args.integers) > 6:
-        tirage.search = args.integers[6]
+    if args.integers[0] > 100:
+        tirage.search = args.integers[0]
+        tirage.plaques = args.integers[1:]
+    else:
+        tirage.plaques = args.integers[0:6]
+        if len(args.integers) > 6:
+            tirage.search = args.integers[6]
 
 if args.extract_json:
     tirage.resolve()
     print(tirage.to_json())
 else:
-    print("#### Tirage du compte est bon#### ")
+    print("#### Tirage du compte est bon ####")
     print("Tirage:", end=" ")
     print(*tirage.plaques, sep=", ", end="\t")
     print(f"Recherche: {tirage.search}")
@@ -47,9 +70,9 @@ else:
 
     # noinspection PyCompatibility
     match status:
-        case CebStatus.COMPTEESTBON:
+        case CebStatus.CompteEstBon:
             print("Le Compte est bon", end=", ")
-        case CebStatus.COMPTEAPPROCHE:
+        case CebStatus.CompteApproche:
             print(f"Compte approché: {tirage.found}", end=", ")
         case _:
             print("Tirage invalide", end=", ")
@@ -62,19 +85,50 @@ else:
             print(f"{tirage.status.name}:{i + 1:04}({s.rank:01}): {s}")
     print()
 # recherche fichier
-cible = rf"{os.getenv('USERPROFILE')}\AppData\Local\\Ceb"
+
+match sys.platform:
+    case "win32":
+        user_profile = os.getenv("USERPROFILE")
+        cible = rf"{user_profile}\AppData\Local\Ceb"
+        file_config = rf"{cible}\config.json"
+    case "linux":
+        user_profile = os.getenv("HOME")
+        cible = f"{user_profile}/.local/ceb"
+        file_config = f"{cible}/config.json"
+    case _:
+        raise "OS Inconnu"
 if not os.path.isdir(cible):
     os.mkdir(cible)
-config = rf"{cible}\config.json"
 
-if os.path.exists(config):
-    zip_file = ""
-    with open(config, encoding="utf-8") as fp:
-        jconf = json.load(fp)
-        zip_file = jconf["Ceb"]["ZipFile"]
-    if zip_file != "":
-        with ZipFile(zip_file, mode="a", compression=ZIP_LZMA) as fzip:
-            num = "1.json"
-            if len(fzip.namelist()) > 0:
-                num = f"{int(max([int(fn.split('.')[0]) for fn in fzip.namelist()])) + 1}.json"
-            fzip.writestr(num, tirage.to_json())
+if not os.path.exists(file_config):
+    sys.exit(0)
+
+with open(file_config, mode="r", encoding="utf-8") as fp:
+    config = json.load(fp)
+
+if config["mongoDB"]:
+    export_to_mongodb(config["mongoDBServer"], tirage)
+
+match args.save_data:
+    case None:
+        save = config["save"]
+        if not save:
+            sys.exit(0)
+    case False:
+        sys.exit(0)
+
+zipfile = config[sys.platform]["ZipFile"]
+if zipfile != "":
+    with ZipFile(zipfile, mode="a", compression=ZIP_LZMA) as fzip:
+        num = max([0] + [int(g) for g in [f[0:f.rfind(".")] for f in fzip.namelist()] if g.isdigit()]) + 1
+        jsonfile = f"{num:06}.json"
+        fzip.writestr(jsonfile, tirage.to_json())
+        pick = config["PickFile"]
+        if pick:
+            num += 1
+            pklfile = f"{num:06}.pkl"
+            pickfile = tempfile.NamedTemporaryFile(mode="w+b", prefix="ceb_", suffix=".tmp", delete=False)
+            pickle.dump(tirage.result, pickfile)
+            pickfile.close()
+            fzip.write(pickfile.name, pklfile)
+            os.remove(pickfile.name)

@@ -2,10 +2,18 @@
     Calcul du compte est bon
 """
 from __future__ import annotations
+import pyjion
+import json
 from enum import Enum
 from random import randint
-from typing import List, Any, Dict, Tuple
-import json
+from typing import List
+
+pyjion.enable()
+
+LISTEPLAQUES: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
+                           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
+PLAQUESUNIQUES: list[int] = list(set(LISTEPLAQUES))
+MAXINT = 99999999
 
 
 class CebStatus(Enum):
@@ -13,15 +21,12 @@ class CebStatus(Enum):
     Status du compte
     """
 
-    INDEFINI = 0
-    VALID = 1
-    ENCOURS = 2
-    COMPTEESTBON = 3
-    COMPTEAPPROCHE = 4
-    INVALIDE = 5
-
-
-MAXINT = 99999999
+    Indefini = 0
+    Valide = 1
+    EnCours = 2
+    CompteEstBon = 3
+    CompteApproche = 4
+    Invalide = 5
 
 
 class CebBase:
@@ -140,11 +145,6 @@ class CebFind:
         return str(self._found1) + (f" et {self._found2}" if not self.is_unique else "")
 
 
-LISTEPLAQUES: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
-                           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
-PLAQUESUNIQUES: list[int] = list(set(LISTEPLAQUES))
-
-
 class CebTirage:
     """
     Tirage Plaques et Recherche
@@ -158,14 +158,14 @@ class CebTirage:
         self._found: CebFind = CebFind()
         self._solutions: List[CebBase] = []
         self._diff: int = MAXINT
-        self._status: CebStatus = CebStatus.INDEFINI
+        self._status: CebStatus = CebStatus.Indefini
         if search != 0 and len(plaques) > 0:
             self.valid()
         elif search == 0 and len(plaques) > 0:
             self._search = randint(100, 999)
             self.valid()
         else:
-            self.rand()
+            self.random()
 
     def clear(self) -> CebStatus:
         self._solutions = []
@@ -186,7 +186,7 @@ class CebTirage:
         self._search = value
         self.clear()
 
-    def rand(self) -> CebStatus:
+    def random(self) -> CebStatus:
         self.clear()
         self._search = randint(100, 999)
         liste_plaques = LISTEPLAQUES[:]
@@ -198,18 +198,11 @@ class CebTirage:
         self.valid()
         return self.status
 
-    def _lststr(self) -> str:
-        return "[[\"" + "\"], [\"".join(["\", \"".join(x.operations)
-                                         for _, x in enumerate(self._solutions)]) + "\"]]"
+    def _sol_to_json(self) -> str:
+        return json.dumps([op.operations for op in self._solutions])
 
     def to_json(self) -> str:
-        return json.dumps({
-            "Search": self.search,
-            "Plaques": [p.value for p in self._plaques],
-            "Status": str(self.status.name),
-            "Found": str(self.found),
-            "Diff": self.diff,
-            "Solutions": [str(s) for s in self.solutions]}, indent=True)
+        return json.dumps(self.result)
 
     @property
     def diff(self) -> int:
@@ -257,24 +250,24 @@ class CebTirage:
         :return : CebStatus
         """
         if self._search not in range(100, 1000):
-            self.status = CebStatus.INVALIDE
+            self.status = CebStatus.Invalide
             return self.status
         if len(self.plaques) != 6:
-            self.status = CebStatus.INVALIDE
+            self.status = CebStatus.Invalide
             return self.status
         for plaque in self._plaques:
             count_plaques = LISTEPLAQUES.count(plaque.value)
             if count_plaques == 0 or count_plaques < self._plaques.count(plaque):
-                self.status = CebStatus.INVALIDE
+                self.status = CebStatus.Invalide
                 return self.status
-        self.status = CebStatus.VALID
+        self.status = CebStatus.Valide
         return self.status
 
     @property
     def solution(self) -> CebBase | None:
         return self.solutions[0] if self.count != 0 else None
 
-    def _set_solution(self, sol: CebBase):
+    def _push_solution(self, sol: CebBase):
         diff = abs(sol.value - self._search)
         if diff > self._diff:
             return
@@ -295,22 +288,22 @@ class CebTirage:
             self._search = search
             self.plaques = plaques
         self.clear()
-        if self.status == CebStatus.INVALIDE:
+        if self.status == CebStatus.Invalide:
             return self.status
-        self._status = CebStatus.ENCOURS
+        self._status = CebStatus.EnCours
         self._resolve(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
-        self.status = CebStatus.COMPTEESTBON \
-            if self.solutions[0].value == self._search else CebStatus.COMPTEAPPROCHE
+        self.status = CebStatus.CompteEstBon \
+            if self.solutions[0].value == self._search else CebStatus.CompteApproche
         return self.status
 
     def _resolve(self, lplaques: List) -> None:
-        for i, plaque_i in enumerate(lplaques):
-            self._set_solution(plaque_i)
+        for i, p in enumerate(lplaques):
+            self._push_solution(p)
             for j in range(i + 1, len(lplaques)):
-                plaque_j = lplaques[j]
+                q = lplaques[j]
                 for operation in "+x/-":
-                    oper = CebOperation(plaque_i, operation, plaque_j)
+                    oper = CebOperation(p, operation, q)
                     if oper.value != 0:
                         self._resolve([oper] +
                                       [x for k, x in enumerate(lplaques) if k not in (i, j)])
@@ -318,22 +311,19 @@ class CebTirage:
     @property
     def result(self) -> dict:
         return {
-            "\"plaques\"": [x.value for x in self.plaques],
-            "\"search\"": self.search,
-            "\"status\"": str(self.status.name),
-            "\"solutions\"": [str(x) for x in self.solutions] if self.status != CebStatus.INVALIDE else []
-        }
+            "Search": self.search,
+            "Plaques": [p.value for p in self._plaques],
+            "Status": self.status.name,
+            "Found": str(self.found),
+            "Diff": self.diff,
+            "Solutions": [str(s) for s in self.solutions]}
 
     @property
     def data(self) -> tuple:
         return self.search, self.plaques
 
     def __repr__(self):
-        return f"{{\"Plaques\": {self.plaques}, " \
-               f"\"Search\": {self.search}, " \
-               f"\"Status\": \"{self.status.name}\"," \
-               f"\"Found\": \"{self.found}\", " \
-               f"\"Solutions\": {self._lststr()}}}"
+        return self.to_json()
 
     @staticmethod
     def solve(plaques: List[int] = (), search: int = 0) -> dict:

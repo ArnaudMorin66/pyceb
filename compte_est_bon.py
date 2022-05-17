@@ -1,4 +1,4 @@
-import pyjion
+#! venv/bin/python3
 import argparse
 import json
 import os
@@ -7,12 +7,10 @@ import sys
 import tempfile
 import time
 from datetime import datetime
-from pymongo import MongoClient, database
 from argparse import ArgumentParser
 from zipfile import ZipFile, ZIP_LZMA
-from pyceb import CebTirage, CebStatus
-
-pyjion.enable()
+from ceb import CebTirage, CebStatus
+from pymongo import MongoClient, database
 
 
 def export_to_mongodb(server: str, tir: CebTirage):
@@ -82,7 +80,7 @@ else:
     if tirage.count > 0:
         print("\nSolutions:")
         for i, s in enumerate(tirage.solutions):
-            print(f"{tirage.status.name}:{i + 1:04}({s.rank:01}): {s}")
+            print(f"{i + 1:04}/{tirage.count:04} ({s.rank:01}), {tirage.status.name}: {s}")
     print()
 # recherche fichier
 

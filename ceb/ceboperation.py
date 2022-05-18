@@ -6,6 +6,10 @@ from .cebbase import CebBase
 class CebOperation(CebBase):
 
     def __init__(self, g: CebBase, op: str, d: CebBase):
+        """
+
+        @type g: object
+        """
         super().__init__()
         if g._value < d._value:
             g, d = d, g

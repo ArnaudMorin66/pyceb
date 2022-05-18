@@ -8,8 +8,8 @@ import time
 from datetime import datetime
 from argparse import ArgumentParser
 from zipfile import ZipFile, ZIP_LZMA
-from ceb import CebTirage, CebStatus
 from pymongo import MongoClient, database
+from ceb import CebTirage, CebStatus
 
 
 def export_to_mongodb(server: str, tir: CebTirage):
@@ -42,10 +42,11 @@ if args.plaques:
 if args.search != 0:
     tirage.search = args.search
 
-if len(args.integers) > 5:
+if len(args.integers) > 0:
     if args.integers[0] > 100:
         tirage.search = args.integers[0]
-        tirage.plaques = args.integers[1:]
+        if len(args.integers) > 1:
+            tirage.plaques = args.integers[1:]
     else:
         tirage.plaques = args.integers[0:6]
         if len(args.integers) > 6:
@@ -80,10 +81,9 @@ else:
     if tirage.count > 0:
         print("\nSolutions:")
         for i, s in enumerate(tirage.solutions):
-            print(f"{i + 1:4}/{tirage.count:4} ({s.rank:1}), {tirage.status.name}: {s}")
+            print(f"{i + 1}/{tirage.count} ({s.rank}),\t{tirage.status.name}: {s}")
     print()
 # recherche fichier
-
 match sys.platform:
     case "win32":
         user_profile = os.getenv("USERPROFILE")
@@ -94,7 +94,8 @@ match sys.platform:
         cible = f"{user_profile}/.local/ceb"
         file_config = f"{cible}/config.json"
     case _:
-        raise "OS Inconnu"
+        raise Exception(f"Platform Inconnu: {sys.platform}")
+
 if not os.path.isdir(cible):
     os.mkdir(cible)
 

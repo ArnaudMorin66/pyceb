@@ -6,12 +6,12 @@ from __future__ import annotations
 import json
 from random import randint
 from typing import List
-
-from .cebfind import CebFind, MAXINT
+from sys import maxsize as MAXINT
 from .cebplaque import CebPlaque, LISTEPLAQUES
 from .ceboperation import CebOperation
 from .cebstatus import CebStatus
 from .cebbase import CebBase
+from .cebfind import CebFind
 
 
 class CebTirage:
@@ -26,6 +26,7 @@ class CebTirage:
         self._search: int = search
         self._found: CebFind = CebFind()
         self._solutions: List[CebBase] = []
+
         self._diff: int = MAXINT
         self._status: CebStatus = CebStatus.Indefini
         if search != 0 and len(plaques) > 0:

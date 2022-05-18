@@ -1,5 +1,5 @@
 import argparse
-import json
+from json import load
 import os
 import pickle
 import sys
@@ -60,9 +60,10 @@ else:
     print(*tirage.plaques, sep=", ", end="\t")
     print(f"Recherche: {tirage.search}")
 
-    timer: int = time.perf_counter_ns()
+    # timer: int = time.perf_counter_ns()
+    timer: int = time.process_time_ns()
     status: CebStatus = tirage.resolve()
-    ellapsed: int = time.perf_counter_ns() - timer
+    ellapsed: int = time.process_time_ns() - timer
     print()
 
     # noinspection PyCompatibility
@@ -101,7 +102,7 @@ if not os.path.exists(file_config):
     sys.exit(0)
 
 with open(file_config, mode="r", encoding="utf-8") as fp:
-    config = json.load(fp)
+    config = load(fp)
 
 if config["mongodb"]:
     export_to_mongodb(config["mongodbserver"], tirage)

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import json
-
-MAXINT: int = 99999999
+from sys import maxsize as MAXINT
 
 
 class CebFind:

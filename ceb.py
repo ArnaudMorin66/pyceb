@@ -1,4 +1,3 @@
-#! venv/bin/python3
 import argparse
 import json
 import os
@@ -80,7 +79,7 @@ else:
     if tirage.count > 0:
         print("\nSolutions:")
         for i, s in enumerate(tirage.solutions):
-            print(f"{i + 1:04}/{tirage.count:04} ({s.rank:01}), {tirage.status.name}: {s}")
+            print(f"{i + 1:4}/{tirage.count:4} ({s.rank:1}), {tirage.status.name}: {s}")
     print()
 # recherche fichier
 
@@ -104,8 +103,8 @@ if not os.path.exists(file_config):
 with open(file_config, mode="r", encoding="utf-8") as fp:
     config = json.load(fp)
 
-if config["mongoDB"]:
-    export_to_mongodb(config["mongoDBServer"], tirage)
+if config["mongodb"]:
+    export_to_mongodb(config["mongodbserver"], tirage)
 
 match args.save_data:
     case None:
@@ -115,13 +114,13 @@ match args.save_data:
     case False:
         sys.exit(0)
 
-zipfile = config[sys.platform]["ZipFile"]
+zipfile = config[sys.platform]["zipfile"]
 if zipfile != "":
     with ZipFile(zipfile, mode="a", compression=ZIP_LZMA) as fzip:
         num = max([0] + [int(g) for g in [f[0:f.rfind(".")] for f in fzip.namelist()] if g.isdigit()]) + 1
         jsonfile = f"{num:06}.json"
         fzip.writestr(jsonfile, tirage.to_json())
-        pick = config["PickFile"]
+        pick = config["pickfile"]
         if pick:
             num += 1
             pklfile = f"{num:06}.pkl"

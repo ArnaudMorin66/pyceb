@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 
-MAXINT = 99999999
+MAXINT: int = 99999999
 
 
 class CebFind:

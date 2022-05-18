@@ -8,14 +8,10 @@ from random import randint
 from typing import List
 
 from .cebfind import CebFind, MAXINT
-from .cebplaque import CebPlaque
+from .cebplaque import CebPlaque, LISTEPLAQUES
 from .ceboperation import CebOperation
 from .cebstatus import CebStatus
 from .cebbase import CebBase
-
-LISTEPLAQUES: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
-                           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
-PLAQUESUNIQUES: list[int] = list(set(LISTEPLAQUES))
 
 
 class CebTirage:

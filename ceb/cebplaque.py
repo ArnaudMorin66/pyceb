@@ -13,4 +13,10 @@ class CebPlaque(CebBase):
     def __init__(self, v=0):
         super().__init__()
         self._value = v
+        if not self.is_valid:
+            raise Exception("Valeur invalide")
         self.operations.extend([str(v)])
+
+    @property
+    def is_valid(self) -> int:
+        return self._value in PLAQUESUNIQUES

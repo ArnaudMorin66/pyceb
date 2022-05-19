@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .cebbase import CebBase
+from .cebbase import *
 
 
 class CebOperation(CebBase):

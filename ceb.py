@@ -81,7 +81,7 @@ else:
     if tirage.count > 0:
         print("\nSolutions:")
         for i, s in enumerate(tirage.solutions):
-            print(f"{i + 1}/{tirage.count} ({s.rank}),\t{tirage.status.name}: {s}")
+            print(f"{tirage.status.name}, \t{i + 1}/{tirage.count} ({s.rank}):\t{s}")
     print()
 # recherche fichier
 match sys.platform:

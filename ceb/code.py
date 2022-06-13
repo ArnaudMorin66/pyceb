@@ -6,22 +6,179 @@ from __future__ import annotations
 import json
 from random import randint
 from typing import List
-
-from .cebbase import CebBase
-from .cebfind import CebFind
-from .ceboperation import CebOperation
-from .cebplaque import CebPlaque, LISTEPLAQUES
-from .cebstatus import CebStatus
 from sys import maxsize as MAXINT
+from enum import Enum
+
+"""
+CebBase
+"""
+
+
+class CebBase:
+    """
+    Classe de base
+    """
+
+    def __init__(self) -> None:
+        self._value: int = 0
+        self._operations: List[str] = []
+
+    @property
+    def value(self) -> int:
+        """
+
+        :rtype: int
+        """
+        return self._value
+
+    @value.setter
+    def value(self, valeur: int):
+        """
+        """
+        self._value = valeur
+
+    @property
+    def rank(self) -> int:
+        """
+        Retourne le rang
+        :return : int
+        """
+        return len(self._operations)
+
+    @property
+    def operations(self) -> List[str]:
+        """
+        :return : Liste des opérations
+        """
+        return self._operations
+
+    def __repr__(self) -> str:
+        return ", ".join(self._operations)
+
+    def __eq__(self, other: CebBase) -> bool:
+        return self._operations == other.operations
+
+
+"""
+CebPlaque
+"""
+LISTEPLAQUES: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25, 50, 75, 100,
+                           1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 25]
+PLAQUESUNIQUES: list[int] = list(set(LISTEPLAQUES))
+
+
+class CebPlaque(CebBase):
+    def __init__(self, v: int = 0):
+        super().__init__()
+        self._value = v
+        if not self.is_valid:
+            raise ValueError(f"Valeur {v} invalide")
+        self.operations.extend([str(v)])
+
+    @property
+    def is_valid(self) -> int:
+        return self._value in PLAQUESUNIQUES
+
+
+"""
+CebOperation
+"""
+
+
+class CebOperation(CebBase):
+
+    def __init__(self, g: CebBase, op: str, d: CebBase):
+        """
+        definir une Opération
+        @type g: CebBase
+        @type op: str (+-x/)
+        @type d: CebBase
+        """
+        super().__init__()
+        if g._value < d._value:
+            g, d = d, g
+
+        match op:
+            case "+":
+                self._value = g._value + d._value
+            case "-":
+                self._value = g._value - d._value
+            case "x":
+                self._value = g._value * d._value if g._value > 1 and d._value > 1 else 0
+            case "/":
+                self._value = g._value // d._value \
+                    if d._value > 1 and g._value % d._value == 0 else 0
+            case _:
+                self._value = 0
+        if self._value != 0:
+            self._operations.clear()
+            if isinstance(g, CebOperation):
+                self._operations.extend(g._operations)
+            if isinstance(d, CebOperation):
+                self.operations.extend(d.operations)
+            self._operations.append(f"{g._value} {op} {d._value} = {self._value}")
+
+
+"""
+CebFind
+"""
+
+
+class CebStatus(Enum):
+    """
+    Status du compte
+    """
+
+    Indefini = 0
+    Valide = 1
+    EnCours = 2
+    CompteEstBon = 3
+    CompteApproche = 4
+    Invalide = 5
+
+
+class CebFind:
+    def __init__(self):
+        self._found1, self._found2 = MAXINT, -1
+
+    @property
+    def found1(self) -> int:
+        return self._found1
+
+    @property
+    def found2(self) -> int:
+        return self._found2
+
+    def init(self, value: int = MAXINT) -> None:
+        self._found1 = value
+        self._found2 = -1
+
+    def set(self, value: int) -> None:
+        if value in (self._found1, self._found2):
+            return
+        elif self._found1 > value:
+            self._found2, self._found1 = self._found1, value
+        else:
+            self._found2 = value
+
+    @property
+    def is_unique(self) -> bool:
+        return self._found2 == -1
+
+    def __repr__(self):
+        return json.dumps({"found1": self._found1, "found2": self._found2})
+
+    def __str__(self) -> str:
+        return str(self._found1) + (f" et {self._found2}" if not self.is_unique else "")
 
 
 class CebTirage:
     """
     Tirage Plaques et Recherche
     """
-    _plaques: list[CebPlaque]
-    _search: int
-    _solutions: List[CebBase]
+    _plaques: list[CebPlaque] = []
+    _search: int = 0
+    _solutions: List[CebBase] = []
     _diff: int = MAXINT
     _status: CebStatus = CebStatus.Indefini
     _found: CebFind = CebFind()
@@ -31,11 +188,9 @@ class CebTirage:
 
         @type search: int Valeur à chercher
         """
-        self._plaques = []
-        for _, k in enumerate(plaques):
+        for k in plaques:
             self._plaques.append(CebPlaque(k))
         self._search = search
-        self._solutions = []
         if search != 0 and len(plaques) > 0:
             self.valid()
         elif search == 0 and len(plaques) > 0:
@@ -207,3 +362,7 @@ class CebTirage:
         _tirage = CebTirage(plaques, search)
         _tirage.resolve()
         return _tirage
+
+
+if __name__ == "__main__":
+    print(CebTirage.solve())

@@ -1,17 +1,7 @@
-from .cebtirage import CebTirage
-from .cebfind import CebFind
-from .cebplaque import CebPlaque, LISTEPLAQUES, PLAQUESUNIQUES
-from .ceboperation import CebOperation
-from .cebstatus import CebStatus
-from .cebbase import CebBase
+from .code import CebTirage, CebBase, CebStatus, CebOperation, CebPlaque, CebFind, LISTEPLAQUES, PLAQUESUNIQUES
+
 
 __all__ = [
-    "CebTirage",
-    "CebBase",
-    "CebStatus",
-    "CebOperation",
-    "CebPlaque",
-    "CebFind",
-    "LISTEPLAQUES",
-    "PLAQUESUNIQUES"
+    "CebTirage", "CebBase", "CebStatus", "CebOperation",
+    "CebPlaque", "CebFind", "LISTEPLAQUES", "PLAQUESUNIQUES"
 ]

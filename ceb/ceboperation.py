@@ -7,8 +7,10 @@ class CebOperation(CebBase):
 
     def __init__(self, g: CebBase, op: str, d: CebBase):
         """
-
-        @type g: object
+        definir une Opération
+        @type g: CebBase
+        @type op: str (+-x/)
+        @type d: CebBase
         """
         super().__init__()
         if g._value < d._value:

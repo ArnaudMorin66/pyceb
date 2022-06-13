@@ -3,30 +3,39 @@
 """
 from __future__ import annotations
 
+import json
 from random import randint
 from typing import List
 
-from .cebfind import *
-from .ceboperation import *
-from .cebplaque import *
-from .cebstatus import *
+from .cebbase import CebBase
+from .cebfind import CebFind
+from .ceboperation import CebOperation
+from .cebplaque import CebPlaque, LISTEPLAQUES
+from .cebstatus import CebStatus
+from sys import maxsize as MAXINT
 
 
 class CebTirage:
     """
     Tirage Plaques et Recherche
     """
+    _plaques: list[CebPlaque]
+    _search: int
+    _solutions: List[CebBase]
+    _diff: int = MAXINT
+    _status: CebStatus = CebStatus.Indefini
+    _found: CebFind = CebFind()
 
     def __init__(self, plaques: List[int] = (), search: int = 0) -> None:
-        self._plaques: List[CebPlaque] = []
+        """
+
+        @type search: int Valeur à chercher
+        """
+        self._plaques = []
         for _, k in enumerate(plaques):
             self._plaques.append(CebPlaque(k))
-        self._search: int = search
-        self._found: CebFind = CebFind()
-        self._solutions: List[CebBase] = []
-
-        self._diff: int = MAXINT
-        self._status: CebStatus = CebStatus.Indefini
+        self._search = search
+        self._solutions = []
         if search != 0 and len(plaques) > 0:
             self.valid()
         elif search == 0 and len(plaques) > 0:
@@ -59,15 +68,16 @@ class CebTirage:
         self._search = randint(100, 999)
         liste_plaques = LISTEPLAQUES[:]
         self._plaques[:] = []
-        for _ in range(6):
+        while len(self._plaques) < 6:
             valeur_plaque = randint(0, len(liste_plaques) - 1)
             self._plaques.append(CebPlaque(liste_plaques[valeur_plaque]))
             del liste_plaques[valeur_plaque]
-        self.valid()
-        return self.status
+        # self.valid()
+        self._status = CebStatus.Valide
+        return self._status
 
     def _sol_to_json(self) -> str:
-        return json.dumps([op.operations for op in self._solutions])
+        return json.dumps(set([op.operations for op in self._solutions]))
 
     def to_json(self) -> str:
         return json.dumps(self.result)
@@ -101,15 +111,8 @@ class CebTirage:
         return self._plaques
 
     @plaques.setter
-    def plaques(self, value: List[CebPlaque] | List[int]):
-        self._plaques[:] = []
-        for element in value:
-            if isinstance(element, int):
-                self._plaques.append(CebPlaque(element))
-            elif isinstance(element, CebPlaque):
-                self._plaques.append(element)
-            else:
-                raise ValueError("Errur instance value")
+    def plaques(self, value: List[CebPlaque | int]):
+        self._plaques[:] = [k if not isinstance(k, int) else CebPlaque(k) for k in value]
         self.clear()
 
     def valid(self) -> CebStatus:
@@ -118,25 +121,31 @@ class CebTirage:
         :return : CebStatus
         """
         if self._search not in range(100, 1000):
-            self.status = CebStatus.Invalide
-            return self.status
+            self._status = CebStatus.Invalide
+            return self._status
         if len(self.plaques) != 6:
-            self.status = CebStatus.Invalide
-            return self.status
+            self._status = CebStatus.Invalide
+            return self._status
         for plaque in self._plaques:
-            count_plaques = LISTEPLAQUES.count(plaque.value)
+            count_plaques: int = LISTEPLAQUES.count(plaque.value)
             if count_plaques == 0 or count_plaques < self._plaques.count(plaque):
-                self.status = CebStatus.Invalide
-                return self.status
-        self.status = CebStatus.Valide
-        return self.status
+                self._status = CebStatus.Invalide
+                return self._status
+        self._status = CebStatus.Valide
+        return self._status
 
     @property
     def solution(self) -> CebBase | None:
         return self.solutions[0] if self.count != 0 else None
 
-    def _push_solution(self, sol: CebBase):
-        diff = abs(sol.value - self._search)
+    def _add_solution(self, sol: CebBase):
+        """
+            ajoute l'opération sol aux solutions si valeur est plus proche ou égale
+            à celles déjà trouvées
+        @param sol:
+        @return: rien
+        """
+        diff: int = abs(sol.value - self._search)
         if diff > self._diff:
             return
         if diff != self._diff:
@@ -147,7 +156,7 @@ class CebTirage:
             self._solutions.append(sol)
             self._found.set(sol.value)
 
-    def resolve(self, plaques: List[int] = (), search: int = 0) -> CebStatus:
+    def resolve(self, plaques: List[CebPlaque | int] = (), search: int = 0) -> CebStatus:
         """
 
         :rtype: object
@@ -156,18 +165,18 @@ class CebTirage:
             self._search = search
             self.plaques = plaques
         self.clear()
-        if self.status == CebStatus.Invalide:
-            return self.status
+        if self._status == CebStatus.Invalide:
+            return self._status
         self._status = CebStatus.EnCours
         self._resolve(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
         self.status = CebStatus.CompteEstBon \
             if self.solutions[0].value == self._search else CebStatus.CompteApproche
-        return self.status
+        return self._status
 
     def _resolve(self, lplaques: List) -> None:
         for i, p in enumerate(lplaques):
-            self._push_solution(p)
+            self._add_solution(p)
             for j in range(i + 1, len(lplaques)):
                 q = lplaques[j]
                 for operation in "+x/-":
@@ -181,7 +190,7 @@ class CebTirage:
         return {
             "Search": self.search,
             "Plaques": [p.value for p in self._plaques],
-            "Status": self.status.name,
+            "Status": self._status.name,
             "Found": str(self.found),
             "Diff": self.diff,
             "Solutions": [str(s) for s in self.solutions]}
@@ -194,11 +203,7 @@ class CebTirage:
         return self.to_json()
 
     @staticmethod
-    def solve(plaques: List[int] = (), search: int = 0) -> dict:
+    def solve(plaques: List[int] = (), search: int = 0) -> CebTirage:
         _tirage = CebTirage(plaques, search)
         _tirage.resolve()
-        return _tirage.result
-
-
-if __name__ == "__main__":
-    print(CebTirage.solve())
+        return _tirage

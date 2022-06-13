@@ -6,8 +6,7 @@ from sys import maxsize as MAXINT
 
 class CebFind:
     def __init__(self):
-        self._found1, self._found2 = 0, -1
-        self.init()
+        self._found1, self._found2 = MAXINT, -1
 
     @property
     def found1(self) -> int:

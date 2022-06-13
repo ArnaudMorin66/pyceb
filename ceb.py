@@ -1,36 +1,52 @@
-import argparse
-from json import load
+#!C:/Users/arnaud/Source/python/pyceb/venv/Scripts/python.exe
 import os
 import pickle
 import sys
 import tempfile
 import time
+from argparse import ArgumentParser, BooleanOptionalAction
 from datetime import datetime
-from argparse import ArgumentParser
+from json import load
+from typing import Callable
 from zipfile import ZipFile, ZIP_LZMA
 from pymongo import MongoClient, database
 from ceb import CebTirage, CebStatus
 
 
+def exec_time(fn: Callable, *vals) -> tuple[int, any]:
+    """
+
+    @type fn: object
+    """
+    timer: int = time.process_time_ns()
+    result = fn(*vals)
+    return time.process_time_ns() - timer, result
+
+
 def export_to_mongodb(server: str, tir: CebTirage):
+    """
+
+    @param server:
+    @type tir: object
+    """
     client: MongoClient = MongoClient(server)
     db: database = client.ceb
     domaine: str = os.getenv("USERDOMAIN" if sys.platform == "win32" else "HOST")
     db.comptes.insert_one({"_id": {"lang": "python", "domain": domaine, "date": datetime.utcnow()}} | tir.result)
 
 
-parser: ArgumentParser = argparse.ArgumentParser(description="Compte est bon")
+parser: ArgumentParser = ArgumentParser(description="Compte est bon")
 parser.add_argument("-p", "--plaques", nargs="+",
                     type=int, help="plaques", default=[])
 parser.add_argument("-s", "--search", dest="search",
                     help="Valeur à chercher", type=int, default=0)
 parser.add_argument("-j", "--json", dest="extract_json", type=bool,
-                    action=argparse.BooleanOptionalAction,
+                    action=BooleanOptionalAction,
                     help="affichage du tirage", default=False)
 parser.add_argument('integers', metavar='N', type=int, nargs='*',
                     help='plaques & valeur à chercher')
 parser.add_argument("-S", "--save", dest="save_data", type=bool,
-                    action=argparse.BooleanOptionalAction,
+                    action=BooleanOptionalAction,
                     help="Sauvegarde du tirage", default=None)
 args = parser.parse_args()
 
@@ -62,9 +78,11 @@ else:
     print(f"Recherche: {tirage.search}")
 
     # timer: int = time.perf_counter_ns()
-    timer: int = time.process_time_ns()
-    status: CebStatus = tirage.resolve()
-    ellapsed: int = time.process_time_ns() - timer
+    # timer: int = time.process_time_ns()
+    # status: CebStatus = tirage.resolve()
+    ellapsed: int
+    status: CebStatus
+    ellapsed, status = exec_time(tirage.resolve)  # time.process_time_ns() - timer
     print()
 
     # noinspection PyCompatibility

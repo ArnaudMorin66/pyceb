@@ -18,5 +18,5 @@
     "python.linting.pylintEnabled": true,
     "python.languageServer": "Pylance",
     "git.ignoreLimitWarning": true,
-    "jupyter.jupyterServerType": "local"
+    "jupyter.jupyterServerType": "local",
 }

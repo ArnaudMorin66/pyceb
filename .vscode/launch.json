@@ -19,15 +19,12 @@
             "host": "localhost"
         },
         {
-            "name": "Python: Django",
+            "name": "Python: Ceb",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/manage.py",
+            "program": "${workspaceFolder}/ceb.py",
             "console": "integratedTerminal",
             "args": [
-                "runserver",
-                "--noreload",
-                "--nothreading"
             ],
             "django": true
         },

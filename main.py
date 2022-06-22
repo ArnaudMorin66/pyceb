@@ -12,6 +12,10 @@ from zipfile import ZipFile, ZIP_LZMA
 from pymongo import MongoClient, database
 from ceb import CebTirage, CebStatus
 
+# if sys.platform == "win32":
+#    import pyjion
+#    pyjion.enable()
+
 
 def exec_time(fn: Callable, *vals) -> tuple[int, any]:
     """
@@ -101,6 +105,7 @@ else:
         for i, s in enumerate(tirage.solutions):
             print(f"{tirage.status.name}, \t{i + 1}/{tirage.count} ({s.rank}):\t{s}")
     print()
+
 # recherche fichier
 match sys.platform:
     case "win32":
@@ -144,7 +149,7 @@ if zipfile != "":
         if pick:
             num += 1
             pklfile = f"{num:06}.pkl"
-            pickfile = tempfile.NamedTemporaryFile(mode="w+b", prefix="ceb_", suffix=".tmp", delete=False)
+            pickfile = tempfile.TemporaryFile( prefix="ceb_", suffix=".tmp", delete=False)
             pickle.dump(tirage.result, pickfile)
             pickfile.close()
             fzip.write(pickfile.name, pklfile)

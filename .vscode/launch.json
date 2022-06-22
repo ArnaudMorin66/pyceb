@@ -22,7 +22,7 @@
             "name": "Python: Ceb",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/ceb.py",
+            "program": "${workspaceFolder}/main.py",
             "console": "integratedTerminal",
             "args": [
             ],

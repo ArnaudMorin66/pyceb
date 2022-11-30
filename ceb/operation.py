@@ -21,9 +21,9 @@ class CebOperation(CebBase):
                 self._value = g.value + d.value
             case "-":
                 self._value = g.value - d.value
-            case "x":
+            case "x" | "." | "*":
                 self._value = g.value * d.value if g.value > 1 and d.value > 1 else 0
-            case "/":
+            case "/" | ":":
                 self._value = g.value // d.value \
                     if d.value > 1 and g.value % d.value == 0 else 0
             case _:

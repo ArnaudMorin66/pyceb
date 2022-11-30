@@ -1,12 +1,12 @@
-from __future__ import annotations
+# from __future__ import annotations
 
 import json
-from sys import maxsize as MAXINT
+import sys
 
 
 class CebFind:
     def __init__(self):
-        self._found1, self._found2 = MAXINT, -1
+        self._found1, self._found2 = sys.maxsize, -1
 
     @property
     def found1(self) -> int:
@@ -16,14 +16,14 @@ class CebFind:
     def found2(self) -> int:
         return self._found2
 
-    def init(self, value: int = MAXINT) -> None:
+    def reset(self, value: int = sys.maxsize) -> None:
         self._found1 = value
         self._found2 = -1
 
     def set(self, value: int) -> None:
         if value in (self._found1, self._found2):
             return
-        elif self._found1 > value:
+        if self._found1 > value:
             self._found2, self._found1 = self._found1, value
         else:
             self._found2 = value

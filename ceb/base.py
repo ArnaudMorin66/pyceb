@@ -1,3 +1,4 @@
+""" classe de base CebBase (Plaque ou Opération) """
 from __future__ import annotations
 
 from typing import List
@@ -7,10 +8,12 @@ class CebBase:
     """
     Classe de base
     """
+    _value: int
+    _operations: List[str]
 
     def __init__(self) -> None:
-        self._value: int = 0
-        self._operations: List[str] = []
+        self._value = 0
+        self._operations = []
 
     @property
     def value(self) -> int:

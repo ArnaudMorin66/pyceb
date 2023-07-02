@@ -19,4 +19,5 @@
     "python.languageServer": "Pylance",
     "git.ignoreLimitWarning": true,
     "jupyter.jupyterServerType": "local",
+    "window.commandCenter": true
 }

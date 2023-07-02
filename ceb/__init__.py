@@ -3,10 +3,9 @@ from ceb.base import CebBase
 from ceb.status import CebStatus
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES, PLAQUESUNIQUES
-from ceb.find import CebFind
 
 __all__ = [
      "CebTirage", "CebBase", "CebStatus", "CebOperation",
-     "CebPlaque", "CebFind", "LISTEPLAQUES", "PLAQUESUNIQUES",
+     "CebPlaque", "LISTEPLAQUES", "PLAQUESUNIQUES",
      "resolve"
  ]

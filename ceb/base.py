@@ -23,11 +23,14 @@ class CebBase:
         """
         return self._value
 
+    def _set_value(self, valeur: int):
+        self._value = valeur
+
     @value.setter
     def value(self, valeur: int):
         """
         """
-        self._value = valeur
+        self._set_value(valeur)
 
     @property
     def rank(self) -> int:
@@ -49,3 +52,4 @@ class CebBase:
 
     def __eq__(self, other: CebBase) -> bool:
         return self._operations == other.operations
+

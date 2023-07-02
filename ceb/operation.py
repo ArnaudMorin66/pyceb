@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from ceb.base import CebBase
 
+Oper = "+" or "x" or "-" or "/"
+
 
 class CebOperation(CebBase):
 
-    def __init__(self, g: CebBase, op: str, d: CebBase):
+    def __init__(self, g: CebBase, op: Oper, d: CebBase):
         """
         definir une Opération
         @type g: CebBase
@@ -21,7 +23,7 @@ class CebOperation(CebBase):
                 self._value = g.value + d.value
             case "-":
                 self._value = g.value - d.value
-            case "x" | "." | "*":
+            case "x":
                 self._value = g.value * d.value if g.value > 1 and d.value > 1 else 0
             case "/" | ":":
                 self._value = g.value // d.value \

@@ -94,7 +94,7 @@ if __name__ == "__main__":
         # noinspection PyCompatibility
         match status:
             case CebStatus.CompteEstBon:
-                print("Le Compte est bon", end=", ")
+                print(f"Le Compte est bon", end=", ")
             case CebStatus.CompteApproche:
                 print(f"Compte approché: {tirage.found}", end=", ")
             case _:
@@ -142,7 +142,7 @@ if __name__ == "__main__":
                 sauvegarde = False
             case _:
                 # noinspection PyRedeclaration
-                sauvegarde = False
+                sauvegarde = True
 
         if sauvegarde:
             zipfile = config[sys.platform]["zipfile"]

@@ -8,41 +8,34 @@ import json
 from random import randint
 from sys import maxsize
 from typing import List
-
 from builtins import list
 
 from ceb.base import CebBase
-from ceb.observer import Observer
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.status import CebStatus
+from ceb.iupdate import IUpdate
 
 
-class CebTirage:
+class CebTirage(IUpdate):
     """
     Tirage Plaques et Recherche
     """
-
-    def update(self, observer):
-        self.clear()
-
-    _observer: Observer
 
     def __init__(self, plaques: List[int] = (), search: int = 0, auto: bool = False) -> None:
         """
 
         @type search: int Valeur à chercher
         """
+        super().__init__()
         self.auto: bool = auto
         self._plaques: List[CebPlaque] = []
         self._search: int = 0
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
         self._status: CebStatus = CebStatus.Indefini
-        self._observer = Observer()
-        self._observer.attach(self)
         for k in plaques:
-            self._plaques.append(CebPlaque(k, self._observer))
+            self._plaques.append(CebPlaque(k, self))
 
         self._search = search
         if search != 0 and len(plaques) > 0:
@@ -71,8 +64,9 @@ class CebTirage:
 
     @search.setter
     def search(self, value: int):
+        old = self._search
         self._search = value
-        self.clear()
+        self.update(old, value)
 
     def random(self) -> CebStatus:
         self._search = randint(100, 999)
@@ -80,7 +74,7 @@ class CebTirage:
         self._plaques[:] = []
         while len(self._plaques) < 6:
             valeur_plaque = randint(0, len(liste_plaques) - 1)
-            self._plaques.append(CebPlaque(liste_plaques[valeur_plaque], self._observer))
+            self._plaques.append(CebPlaque(liste_plaques[valeur_plaque], self))
             del liste_plaques[valeur_plaque]
         return self.clear()
 
@@ -126,19 +120,19 @@ class CebTirage:
         validation du tirae
         :return : CebStatus
         """
-        if not (99 < self._search < 1000):
+        if 99 >= self._search or self._search >= 1000 or len(self._plaques) != 6:
             self._status = CebStatus.Invalide
-            return self._status
-        if len(self.plaques) != 6:
-            self._status = CebStatus.Invalide
-            return self._status
-        for plaque in self._plaques:
-            count_plaques: int = LISTEPLAQUES.count(plaque.value)
-            if count_plaques == 0 or count_plaques < self._plaques.count(plaque):
-                self._status = CebStatus.Invalide
-                return self._status
-        self._status = CebStatus.Valide
+        else:
+            self._status = CebStatus.Valide
+            for plaque in self._plaques:
+                count_plaques: int = LISTEPLAQUES.count(plaque.value)
+                if count_plaques == 0 or count_plaques < self._plaques.count(plaque):
+                    self._status = CebStatus.Invalide
+                    break
         return self._status
+
+    def update(self, param1, param2):
+        self.clear()
 
     @property
     def solution(self) -> CebBase | None:
@@ -184,15 +178,15 @@ class CebTirage:
         return await asyncio.to_thread(self.resolve)
 
     def _resolve(self, lplaques: List) -> None:
-        for i, plq in enumerate(lplaques):
+        for ix, plq in enumerate(lplaques):
             self._add_solution(plq)
-            for j in range(i + 1, len(lplaques)):
-                q = lplaques[j]
+            for jx in range(ix + 1, len(lplaques)):
+                q = lplaques[jx]
                 for operation in "x+-/":
                     oper: CebOperation = CebOperation(plq, operation, q)
                     if oper.value != 0:
                         self._resolve([oper] +
-                                      [x for k, x in enumerate(lplaques) if k not in (i, j)])
+                                      [x for k, x in enumerate(lplaques) if k not in (ix, jx)])
 
     @property
     def result(self) -> dict:
@@ -219,7 +213,7 @@ def resolve(plaques: List[int] = (), search: int = 0, auto: bool = False) -> Ceb
 
 
 if __name__ == "__main__":
-    print()
+    print("")
     t = CebTirage(auto=False)
     t.resolve()
     print(f"search: {t.search}")
@@ -241,6 +235,3 @@ if __name__ == "__main__":
     print(f"{t.count} solutions")
     for i, s in enumerate(t.solutions):
         print(f"\t{i}: \t{s}")
-    print(len(t.solutions))
-    t.plaques[0].value = 5
-    print(len(t.solutions))

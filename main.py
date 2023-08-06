@@ -9,9 +9,11 @@ from datetime import datetime
 from json import load
 from typing import Callable
 from zipfile import ZipFile, ZIP_LZMA
-from pymongo import MongoClient, database
-from ceb import CebTirage, CebStatus
+
 import keyboard
+from pymongo import MongoClient, database
+
+from ceb import CebTirage, CebStatus
 
 
 def exec_time(fun: Callable, *vals: object) -> tuple[int, any]:  # type: ignore
@@ -32,31 +34,54 @@ def export_to_mongodb(server: str, tir: CebTirage):
     client: MongoClient = MongoClient(server)
     datab: database = client.ceb  # type: ignore
     domaine: str = os.getenv("USERDOMAIN" if sys.platform == "win32" else "HOST")  # type: ignore
-    datab.comptes.insert_one({"_id": {"lang": "python", "domain": domaine, "date": datetime.utcnow()}}
-                             | tir.result)  # type: ignore
+    datab.comptes.insert_one(
+        {"_id": {"lang": "python", "domain": domaine, "date": datetime.utcnow()}}
+        | tir.result
+    )  # type: ignore
 
 
 if __name__ == "__main__":
     wait: bool = False
     parser: ArgumentParser = ArgumentParser(description="Compte est bon")
-    parser.add_argument("-p", "--plaques", nargs="+",
-                        type=int, help="plaques", default=[])
-    parser.add_argument("-s", "--search", dest="search",
-                        help="Valeur à chercher", type=int, default=0)
+    parser.add_argument(
+        "-p", "--plaques", nargs="+", type=int, help="plaques", default=[]
+    )
+    parser.add_argument(
+        "-s", "--search", dest="search", help="Valeur à chercher", type=int, default=0
+    )
     # noinspection PyTypeChecker
-    parser.add_argument("-j", "--json", dest="extract_json", type=bool,
-                        action=BooleanOptionalAction,
-                        help="affichage du tirage", default=False)
+    parser.add_argument(
+        "-j",
+        "--json",
+        dest="extract_json",
+        type=bool,
+        action=BooleanOptionalAction,
+        help="affichage du tirage",
+        default=False,
+    )
     # noinspection PyTypeChecker
-    parser.add_argument("-w", "--wait", dest="wait", type=bool,
-                        action=BooleanOptionalAction,
-                        help="attendre retour", default=False)
-    parser.add_argument('integers', metavar='N', type=int, nargs='*',
-                        help='plaques & valeur à chercher')
+    parser.add_argument(
+        "-w",
+        "--wait",
+        dest="wait",
+        type=bool,
+        action=BooleanOptionalAction,
+        help="attendre retour",
+        default=False,
+    )
+    parser.add_argument(
+        "integers", metavar="N", type=int, nargs="*", help="plaques & valeur à chercher"
+    )
     # noinspection PyTypeChecker
-    parser.add_argument("-S", "--save", dest="save_data", type=bool,
-                        action=BooleanOptionalAction,
-                        help="Sauvegarde du tirage", default=None)
+    parser.add_argument(
+        "-S",
+        "--save",
+        dest="save_data",
+        type=bool,
+        action=BooleanOptionalAction,
+        help="Sauvegarde du tirage",
+        default=None,
+    )
     args = parser.parse_args()
 
     tirage: CebTirage = CebTirage()
@@ -105,7 +130,9 @@ if __name__ == "__main__":
         if tirage.count > 0:
             print("\nSolutions:")
             for i, s in enumerate(tirage.solutions):
-                print(f"{tirage.status.name}, \t{i + 1}/{tirage.count} ({s.rank}):\t{s}")
+                print(
+                    f"{tirage.status.name}, \t{i + 1}/{tirage.count} ({s.rank}):\t{s}"
+                )
         print()
 
     # recherche fichier
@@ -148,17 +175,29 @@ if __name__ == "__main__":
             zipfile = config[sys.platform]["zipfile"]
             if zipfile != "":
                 with ZipFile(zipfile, mode="a", compression=ZIP_LZMA) as fzip:
-                    num = max([0] + [int(g) for g in [f[0:f.rfind(".")] for f in fzip.namelist()] if g.isdigit()]) + 1
-                    jsonfile = f"{num:06}.json"
-                    fzip.writestr(jsonfile, tirage.json())
-                    pick = config["pickfile"]
-                    if pick:
-                        num += 1
-                        pklfile = f"{num:06}.pkl"
-                        pickfile = tempfile.TemporaryFile(prefix="ceb_", suffix=".tmp", delete=False)
-                        pickle.dump(tirage.result, pickfile)
-                        pickfile.close()
-                        fzip.write(pickfile.name, pklfile)
+                    num = (
+                        max(
+                            [0]
+                            + [
+                                int(g)
+                                for g in [f[0 : f.rfind(".")] for f in fzip.namelist()]
+                                if g.isdigit()
+                            ]
+                        )
+                        + 1
+                    )
+                jsonfile = f"{num:06}.json"
+                fzip.writestr(jsonfile, tirage.json())
+                pick = config["pickfile"]
+                if pick:
+                    num += 1
+                    pklfile = f"{num:06}.pkl"
+                    pickfile = tempfile.TemporaryFile(
+                        prefix="ceb_", suffix=".tmp", delete=False
+                    )
+                    pickle.dump(tirage.result, pickfile)
+                    pickfile.close()
+                    fzip.write(pickfile.name, pklfile)
                     # os.remove(pickfile.name)
     print("\n\n<FINI>")
     if args.wait:
@@ -167,4 +206,3 @@ if __name__ == "__main__":
             continue
     else:
         print("\n")
-

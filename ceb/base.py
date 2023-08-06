@@ -4,11 +4,11 @@ from __future__ import annotations
 from typing import List
 
 
-
 class CebBase:
     """
     Classe de base
     """
+
     _value: int
     _operations: List[str]
 
@@ -29,8 +29,7 @@ class CebBase:
 
     @value.setter
     def value(self, valeur: int):
-        """
-        """
+        """ """
         self._set_value(valeur)
 
     @property
@@ -53,4 +52,3 @@ class CebBase:
 
     def __eq__(self, other: CebBase) -> bool:
         return self._operations == other.operations
-

@@ -5,16 +5,16 @@ from __future__ import annotations
 
 import asyncio
 import json
+from builtins import list
 from random import randint
 from sys import maxsize
 from typing import List
-from builtins import list
 
 from ceb.base import CebBase
+from ceb.iupdate import IUpdate
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.status import CebStatus
-from ceb.iupdate import IUpdate
 
 
 class CebTirage(IUpdate):
@@ -22,7 +22,9 @@ class CebTirage(IUpdate):
     Tirage Plaques et Recherche
     """
 
-    def __init__(self, plaques: List[int] = (), search: int = 0, auto: bool = False) -> None:
+    def __init__(
+        self, plaques: List[int] = (), search: int = 0, auto: bool = False
+    ) -> None:
         """
 
         @type search: int Valeur à chercher
@@ -95,8 +97,12 @@ class CebTirage(IUpdate):
 
         :rtype: List[CebBase]
         """
-        return self._solutions \
-            if self.status == CebStatus.CompteEstBon or self.status == CebStatus.CompteApproche else []
+        return (
+            self._solutions
+            if self.status == CebStatus.CompteEstBon
+            or self.status == CebStatus.CompteApproche
+            else []
+        )
 
     @property
     def status(self) -> CebStatus:
@@ -154,7 +160,9 @@ class CebTirage(IUpdate):
         elif sol not in self._solutions:
             self._solutions.append(sol)
 
-    def resolve(self, plaques: List[int | CebPlaque] = (), search: int = 0) -> CebStatus:
+    def resolve(
+        self, plaques: List[int | CebPlaque] = (), search: int = 0
+    ) -> CebStatus:
         """
 
         :rtype: object
@@ -170,8 +178,11 @@ class CebTirage(IUpdate):
         self._status = CebStatus.EnCours
         self._resolve(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
-        self.status = CebStatus.CompteEstBon \
-            if self._solutions[0].value == self._search else CebStatus.CompteApproche
+        self.status = (
+            CebStatus.CompteEstBon
+            if self._solutions[0].value == self._search
+            else CebStatus.CompteApproche
+        )
         return self._status
 
     async def resolve_async(self) -> CebStatus:
@@ -185,8 +196,10 @@ class CebTirage(IUpdate):
                 for operation in "x+-/":
                     oper: CebOperation = CebOperation(plq, operation, q)
                     if oper.value != 0:
-                        self._resolve([oper] +
-                                      [x for k, x in enumerate(lplaques) if k not in (ix, jx)])
+                        self._resolve(
+                            [oper]
+                            + [x for k, x in enumerate(lplaques) if k not in (ix, jx)]
+                        )
 
     @property
     def result(self) -> dict:
@@ -196,13 +209,16 @@ class CebTirage(IUpdate):
             "Status": self._status.name,
             "Found": str(self.found),
             "Diff": self.diff,
-            "Solutions": [str(sol) for sol in self.solutions]}
+            "Solutions": [str(sol) for sol in self.solutions],
+        }
 
     def __repr__(self):
         return self.json
 
     @staticmethod
-    def solve(plaques: List[int] = (), search: int = 0, auto: bool = False) -> CebTirage:
+    def solve(
+        plaques: List[int] = (), search: int = 0, auto: bool = False
+    ) -> CebTirage:
         _tirage = CebTirage(plaques, search, auto)
         _tirage.resolve()
         return _tirage

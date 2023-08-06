@@ -6,7 +6,6 @@ Oper = "+" or "x" or "-" or "/"
 
 
 class CebOperation(CebBase):
-
     def __init__(self, g: CebBase, op: Oper, d: CebBase):
         """
         definir une Opération
@@ -26,8 +25,9 @@ class CebOperation(CebBase):
             case "x":
                 self._value = g.value * d.value if g.value > 1 and d.value > 1 else 0
             case "/" | ":":
-                self._value = g.value // d.value \
-                    if d.value > 1 and g.value % d.value == 0 else 0
+                self._value = (
+                    g.value // d.value if d.value > 1 and g.value % d.value == 0 else 0
+                )
             case _:
                 self._value = 0
         if self._value != 0:

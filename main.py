@@ -28,14 +28,14 @@ def exec_time(fun: Callable, *vals: object) -> tuple[int, any]:  # type: ignore
 
 def export_to_mongodb(server: str, tir: CebTirage):
     """
-    @param server:
-    @type tir: object
+    @param server: serveur Mongo
+    @type tir: CebTirage
     """
     client: MongoClient = MongoClient(server)
     datab: database = client.ceb  # type: ignore
     domaine: str = os.getenv("USERDOMAIN" if sys.platform == "win32" else "HOST")  # type: ignore
     datab.comptes.insert_one(
-        {"_id": {"lang": "python", "domain": domaine, "date": datetime.utcnow()}}
+        {"_id": {"lang": "python", "domain": domaine, "date": datetime.now()}}
         | tir.result
     )  # type: ignore
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
             print("\nSolutions:")
             for i, s in enumerate(tirage.solutions):
                 print(
-                    f"{tirage.status.name}, \t{i + 1}/{tirage.count} ({s.rank}):\t{s}"
+                    f"{tirage.status.name}, \t{i + 1}/{tirage.count} ({s.rank}): \t{s}"
                 )
         print()
 
@@ -186,12 +186,12 @@ if __name__ == "__main__":
                         )
                         + 1
                     )
-                jsonfile = f"{num:06}.json"
+                jsonfile = f"{num: 06}.json"
                 fzip.writestr(jsonfile, tirage.json())
                 pick = config["pickfile"]
                 if pick:
                     num += 1
-                    pklfile = f"{num:06}.pkl"
+                    pklfile = f"{num: 06}.pkl"
                     pickfile = tempfile.TemporaryFile(
                         prefix="ceb_", suffix=".tmp", delete=False
                     )
@@ -199,7 +199,7 @@ if __name__ == "__main__":
                     pickfile.close()
                     fzip.write(pickfile.name, pklfile)
                     # os.remove(pickfile.name)
-    print("\n\n<FINI>")
+    print("<FINI>")
     if args.wait:
         print("(q) pour finir", end="\n")
         while not keyboard.is_pressed("q"):

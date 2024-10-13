@@ -99,9 +99,7 @@ class CebTirage(IUpdate):
         """
         return (
             self._solutions
-            if self.status == CebStatus.CompteEstBon
-            or self.status == CebStatus.CompteApproche
-            else []
+            if self.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche] else []
         )
 
     @property
@@ -126,15 +124,15 @@ class CebTirage(IUpdate):
         validation du tirae
         :return : CebStatus
         """
-        if 99 >= self._search or self._search >= 1000 or len(self._plaques) != 6:
-            self._status = CebStatus.Invalide
-        else:
+        if 100 <= self._search <= 999 and len(self._plaques) == 6:
             self._status = CebStatus.Valide
             for plaque in self._plaques:
                 count_plaques: int = LISTEPLAQUES.count(plaque.value)
                 if count_plaques == 0 or count_plaques < self._plaques.count(plaque):
                     self._status = CebStatus.Invalide
                     break
+        else:
+            self._status = CebStatus.Invalide
         return self._status
 
     def update(self, param1, param2):
@@ -176,7 +174,7 @@ class CebTirage(IUpdate):
         if self._status == CebStatus.Invalide:
             return self._status
         self._status = CebStatus.EnCours
-        self._resolve(self.plaques[:])
+        self.resolve_stack(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
         self.status = (
             CebStatus.CompteEstBon
@@ -188,18 +186,23 @@ class CebTirage(IUpdate):
     async def resolve_async(self) -> CebStatus:
         return await asyncio.to_thread(self.resolve)
 
-    def _resolve(self, lplaques: List) -> None:
-        for ix, plq in enumerate(lplaques):
-            self._add_solution(plq)
-            for jx in range(ix + 1, len(lplaques)):
-                q = lplaques[jx]
-                for operation in "x+-/":
-                    oper: CebOperation = CebOperation(plq, operation, q)
-                    if oper.value != 0:
-                        self._resolve(
-                            [oper]
-                            + [x for k, x in enumerate(lplaques) if k not in (ix, jx)]
-                        )
+    def resolve_stack(self, plaques: List) -> None:
+
+        def next_list(current_list: List, ceb_operation: CebOperation, i:int, j: int)-> List:
+            return [ceb_operation ]+[ x for k, x in enumerate(current_list) if k not in (i, j)]
+
+        stack = [plaques]
+        while stack:
+            current_liste = stack.pop()
+            for ix, plq in enumerate(current_liste):
+                self._add_solution(plq)
+                for jx in range(ix + 1, len(current_liste)):
+                    q = current_liste[jx]
+                    for operation in "x+-/":
+                        oper: CebOperation = CebOperation(plq, operation, q)
+                        if oper.value != 0:
+                            next_liste =  next_list(current_liste, oper, ix, jx)
+                            stack.append(next_liste)
 
     @property
     def result(self) -> dict:

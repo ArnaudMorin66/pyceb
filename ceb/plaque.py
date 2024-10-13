@@ -1,3 +1,6 @@
+"""
+Importation
+"""
 from __future__ import annotations
 
 from typing import List
@@ -36,6 +39,9 @@ PLAQUESUNIQUES: list[int] = list(set(LISTEPLAQUES))
 
 
 class CebPlaque(CebBase):
+    """
+        classe définissant une plaque du jeu 
+    """
     _observer: IUpdate = None
 
     def __init__(self, v: int = 0, obs: IUpdate = None):
@@ -48,6 +54,9 @@ class CebPlaque(CebBase):
 
     @property
     def is_valid(self) -> int:
+        """
+        teste de la validité de la plaque
+        """
         return self._value in PLAQUESUNIQUES
 
     def _set_value(self, valeur: int):

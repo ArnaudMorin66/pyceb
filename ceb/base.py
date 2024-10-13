@@ -6,7 +6,7 @@ from typing import List
 
 class CebBase:
     """
-    Classe de base
+    Classe de base 
     """
 
     _value: int

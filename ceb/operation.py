@@ -1,13 +1,18 @@
+"""
+  importation
+"""
 from __future__ import annotations
 
 from ceb.base import CebBase
 
-Oper = "+" or "x" or "-" or "/"
+OPER = "+" or "x" or "-" or "/"
 
 
 class CebOperation(CebBase):
-    def __init__(self, g: CebBase, op: Oper, d: CebBase):
-        """
+    """Class represente une opération"""
+    def __init__(self, g: CebBase, op: OPER, d: CebBase):
+        """ 
+        Initialisation 
         definir une Opération
         @type g: CebBase
         @type op: str (+-x/)

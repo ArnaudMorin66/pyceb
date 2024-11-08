@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-from builtins import list
 from random import randint
 from sys import maxsize
 from typing import List
@@ -26,9 +25,12 @@ class CebTirage(IUpdate):
         self, plaques: List[int] = (), search: int = 0, auto: bool = False
     ) -> None:
         """
+            Initialise une instance de CebTirage.
 
-        @type search: int Valeur à chercher
-        """
+            :param plaques: Liste d'entiers représentant les plaques.
+            :param search: Valeur entière à rechercher.
+            :param auto: Booléen indiquant si la recherche doit être automatique.
+            """
         super().__init__()
         self.auto: bool = auto
         self._plaques: List[CebPlaque] = []
@@ -40,7 +42,7 @@ class CebTirage(IUpdate):
             self._plaques.append(CebPlaque(k, self))
 
         self._search = search
-        if search != 0 and len(plaques) > 0:
+        if search and plaques:
             self.clear()
         elif search == 0 and len(plaques) > 0:
             self._search = randint(100, 999)
@@ -49,6 +51,14 @@ class CebTirage(IUpdate):
             self.random()
 
     def clear(self) -> CebStatus:
+        """
+        Réinitialise l'état de l'objet CebTirage.
+
+        Cette méthode vide la liste des solutions, réinitialise la différence maximale,
+        valide l'état actuel et, si l'option auto est activée, lance la résolution.
+
+        :return: Le statut actuel de l'objet CebTirage.
+        """
         self._solutions = []
         self._diff = maxsize
         self.valid()
@@ -71,13 +81,19 @@ class CebTirage(IUpdate):
         self.update(old, value)
 
     def random(self) -> CebStatus:
+        """
+        Génère un tirage aléatoire de plaques et une valeur de recherche.
+
+        Cette méthode initialise la valeur de recherche à un nombre aléatoire entre 100 et 999,
+        puis sélectionne aléatoirement 6 plaques de la liste `LISTEPLAQUES`.
+
+        :return: Le statut actuel de l'objet CebTirage après réinitialisation.
+        """
         self._search = randint(100, 999)
         liste_plaques = LISTEPLAQUES[:]
         self._plaques[:] = []
-        while len(self._plaques) < 6:
-            valeur_plaque = randint(0, len(liste_plaques) - 1)
-            self._plaques.append(CebPlaque(liste_plaques[valeur_plaque], self))
-            del liste_plaques[valeur_plaque]
+        self._plaques = \
+            [CebPlaque(liste_plaques.pop(randint(0, len(liste_plaques) - 1)), self) for _ in range(6)]
         return self.clear()
 
     def json(self) -> str:
@@ -94,9 +110,10 @@ class CebTirage(IUpdate):
     @property
     def solutions(self) -> List[CebBase]:
         """
+            Get the list of solutions if the status is valid.
 
-        :rtype: List[CebBase]
-        """
+            :return: List of solutions.
+            """
         return (
             self._solutions
             if self.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche] else []
@@ -121,8 +138,13 @@ class CebTirage(IUpdate):
 
     def valid(self) -> CebStatus:
         """
-        validation du tirae
-        :return : CebStatus
+        Valide le tirage actuel.
+
+        Cette méthode vérifie si la valeur de recherche est comprise entre 100 et 999
+        et si le nombre de plaques est égal à 6. Elle vérifie également que chaque plaque
+        est présente dans la liste `LISTEPLAQUES` et que leur nombre est suffisant.
+
+        :return: Le statut actuel de l'objet CebTirage, soit `CebStatus.Valide` soit `CebStatus.Invalide`.
         """
         if 100 <= self._search <= 999 and len(self._plaques) == 6:
             self._status = CebStatus.Valide
@@ -144,10 +166,11 @@ class CebTirage(IUpdate):
 
     def _add_solution(self, sol: CebBase):
         """
-            ajoute l'opération sol aux solutions si valeur est plus proche ou égale
-            à celles déjà trouvées
-        @param sol:
-        @return: rien
+        Ajoute l'opération sol aux solutions si la valeur est plus proche ou égale
+        à celles déjà trouvées.
+
+        :param sol: L'opération à ajouter aux solutions.
+        :return: Rien.
         """
         diff: int = abs(sol.value - self._search)
         if diff > self._diff:
@@ -162,10 +185,13 @@ class CebTirage(IUpdate):
         self, plaques: List[int | CebPlaque] = (), search: int = 0
     ) -> CebStatus:
         """
+        Résout le problème en utilisant les plaques et la valeur de recherche fournies.
 
-        :rtype: object
+        :param plaques: Liste d'entiers ou d'objets CebPlaque représentant les plaques.
+        :param search: Valeur entière à rechercher.
+        :return: Le statut actuel de l'objet CebTirage.
         """
-        if search != 0 and len(plaques) == 6:
+        if search and len(plaques) == 6:
             self._search = search
             self.plaques = plaques
 
@@ -173,21 +199,49 @@ class CebTirage(IUpdate):
             self.clear()
         if self._status == CebStatus.Invalide:
             return self._status
+
         self._status = CebStatus.EnCours
         self.resolve_stack(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
-        self.status = (
-            CebStatus.CompteEstBon
-            if self._solutions[0].value == self._search
-            else CebStatus.CompteApproche
-        )
+        self.status = CebStatus.CompteEstBon \
+            if self._solutions[0].value == self._search else CebStatus.CompteApproche
         return self._status
 
     async def resolve_async(self) -> CebStatus:
+        """
+        Asynchronously resolves and returns a CebStatus object.
+
+        This method utilizes asyncio's `to_thread` to run the synchronous `resolve` method in a separate thread,
+        allowing for non-blocking execution in an asynchronous environment. It is particularly useful when dealing
+        with I/O-bound tasks that do not natively support asynchronous execution but can benefit from being
+        executed in a separate thread.
+
+        Returns:
+            CebStatus: The result of the `resolve` method.
+
+        """
         return await asyncio.to_thread(self.resolve)
 
     def resolve_stack(self, plaques: List) -> None:
+        """
+        resolve_stack(plaques: List) -> None
+            Iterates through a list of plaques, applying a series of operations to each element and recursively processing the resulting lists until no more operations can be performed.
 
+            Parameters:
+            plaques (List): The initial list of plaques to be processed
+
+        next_list(current_list: List, ceb_operation: CebOperation, i: int, j: int) -> List
+            Generates a new list by applying a given operation to elements at specified indices and excluding those elements from the resulting list.
+
+            Parameters:
+            current_list (List): The list currently being processed
+            ceb_operation (CebOperation): The operation to be applied to the elements at the specified indices
+            i (int): The first index to be operated on
+            j (int): The second index to be operated on
+
+            Returns:
+            List: A new list resulting from the operation and exclusion of specified elements
+        """
         def next_list(current_list: List, ceb_operation: CebOperation, i:int, j: int)-> List:
             return [ceb_operation ]+[ x for k, x in enumerate(current_list) if k not in (i, j)]
 
@@ -201,8 +255,7 @@ class CebTirage(IUpdate):
                     for operation in "x+-/":
                         oper: CebOperation = CebOperation(plq, operation, q)
                         if oper.value != 0:
-                            next_liste =  next_list(current_liste, oper, ix, jx)
-                            stack.append(next_liste)
+                            stack.append(next_list(current_liste, oper, ix, jx))
 
     @property
     def result(self) -> dict:
@@ -222,16 +275,38 @@ class CebTirage(IUpdate):
     def solve(
         plaques: List[int] = (), search: int = 0, auto: bool = False
     ) -> CebTirage:
+        """
+        Crée une instance de CebTirage et résout le problème.
+
+        :param plaques: Liste d'entiers représentant les plaques.
+        :param search: Valeur entière à rechercher.
+        :param auto: Booléen indiquant si la recherche doit être automatique.
+        :return: Une instance de CebTirage après résolution.
+        """
         _tirage = CebTirage(plaques, search, auto)
         _tirage.resolve()
         return _tirage
 
 
 def resolve(plaques: List[int] = (), search: int = 0, auto: bool = False) -> CebTirage:
+    """
+    Résout le problème en créant une instance de CebTirage et en appelant sa méthode solve.
+
+    :param plaques: Liste d'entiers représentant les plaques.
+    :param search: Valeur entière à rechercher.
+    :param auto: Booléen indiquant si la recherche doit être automatique.
+    :return: Une instance de CebTirage après résolution.
+    """
     return CebTirage.solve(plaques, search, auto)
 
 
 if __name__ == "__main__":
+    """
+    Point d'entrée principal du script.
+
+    Cette section du code est exécutée lorsque le script est exécuté directement.
+    Elle crée une instance de `CebTirage`, résout le problème et affiche les résultats.
+    """
     print("")
     t = CebTirage(auto=False)
     t.resolve()

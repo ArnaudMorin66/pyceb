@@ -5,11 +5,11 @@ from typing import List, Self
 from PySide6.QtCore import Slot, Qt, QAbstractTableModel
 from PySide6.QtGui import QKeyEvent, QColor
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
-    QHBoxLayout, QComboBox, QSpinBox, QLayout, QTableView,
-    QHeaderView, QGridLayout, QLabel)
+                               QHBoxLayout, QComboBox, QSpinBox, QLayout, QTableView,
+                               QHeaderView, QGridLayout, QLabel)
 
 from ceb import CebTirage, PLAQUESUNIQUES, CebStatus  # Assurez-vous que le module CebTirage est importé correctement
-from theme import Theme, ThemeManager
+from theme import ThemeManager
 
 
 class CebTirageModel(QAbstractTableModel):
@@ -120,6 +120,17 @@ class CebTirageModel(QAbstractTableModel):
 
 
 class CebMainTirage(QWidget):
+    """
+    Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
+
+    Attributs:
+        tirage (CebTirage): Instance de CebTirage pour gérer le tirage actuel.
+        _plaques_inputs (List[QComboBox]): Liste des QComboBox pour les plaques.
+        _labels_results (List[QLabel]): Liste des QLabel pour afficher les résultats.
+        _search_input (QSpinBox): QSpinBox pour la valeur de recherche.
+        _solutions_table (QTableView): QTableView pour afficher les solutions.
+        _data_model (CebTirageModel): Modèle de données pour le QTableView.
+    """
     tirage = CebTirage()
     _plaques_inputs: List[QComboBox] = []
     _labels_results: List[QLabel] = []
@@ -137,7 +148,7 @@ class CebMainTirage(QWidget):
         super().__init__()
         self.setWindowTitle("Jeux du Compte est bon")
         self.setMinimumSize(800, 600)
-        self.theme_manager = ThemeManager(Theme.dark, self)
+        self.theme_manager = ThemeManager(self)
         self.tirageform_layout = QVBoxLayout()
         self.add_inputs_layout() \
             .add_command_layout() \
@@ -147,13 +158,14 @@ class CebMainTirage(QWidget):
 
     def keyPressEvent(self, event: QKeyEvent):
         """
-        Handles key press events for the widget.
+        Gère les événements de pression de touche pour le widget.
 
-        This method overrides the default key press event handler to provide custom
-        behavior for specific key combinations when the tirage status is not `EnCours`.
+        Cette méthode remplace le gestionnaire d'événements de pression de touche par défaut
+        pour fournir un comportement personnalisé pour des combinaisons de touches spécifiques
+        lorsque le statut du tirage n'est pas `EnCours`.
 
         Args:
-            event (QKeyEvent): The key event to handle.
+            event (QKeyEvent): L'événement de pression de touche à gérer.
         """
         if self.tirage.status == CebStatus.EnCours:
             return

@@ -92,7 +92,7 @@ if len(args.integers) > 0:
 
 if args.extract_json:
     tirage.resolve()
-    print(tirage.json())
+    print(tirage.json)
 else:
     print("#### Tirage du compte est bon ####")
     print("Tirage:", end=" ")
@@ -169,7 +169,7 @@ if os.path.exists(file_config):
                         + 1
                 )
             jsonfile = f"{num: 06}.json"
-            fzip.writestr(jsonfile, tirage.json())
+            fzip.writestr(jsonfile, tirage.json)
             pick = config["pickfile"]
             if pick:
                 num += 1

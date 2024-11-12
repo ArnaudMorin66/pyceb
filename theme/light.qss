@@ -1,0 +1,11 @@
+QWidget {
+    background-color: beige;
+    color: black;
+}
+QPushButton {
+    background-color: lightgray;
+    color: black;
+}
+QListWidget {
+    alternate-background-color: aquamarine;
+}

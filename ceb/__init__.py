@@ -1,8 +1,8 @@
 from .base import CebBase
 from .operation import CebOperation
-from .plaque import CebPlaque, LISTEPLAQUES, PLAQUESUNIQUES
+from .plaque import CebPlaque, LISTEPLAQUES, PLAQUESUNIQUES, STRPLAQUESUNIQUES
 from .status import CebStatus
-from .tirage import CebTirage, resolve
+from .tirage import CebTirage
 #
 # __all__ = [
 #     "CebTirage",

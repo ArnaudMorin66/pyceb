@@ -4,25 +4,28 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import json
+import os
+import pickle
+import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
 from typing import List
 
 from ceb.base import CebBase
-from ceb.iupdate import IUpdate
+from ceb.inotify import INotify
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.status import CebStatus
 
-
-class CebTirage(IUpdate):
+class CebTirage(INotify):
     """
     Tirage Plaques et Recherche
     """
 
     def __init__(
-        self, plaques: List[int] = (), search: int = 0, auto: bool = False
+            self, plaques: List[int] = (), search: int = 0, auto: bool = False
     ) -> None:
         """
             Initialise une instance de CebTirage.
@@ -69,6 +72,9 @@ class CebTirage(IUpdate):
     @property
     def found(self) -> list[int]:
         return sorted(set([k.value for k in self.solutions]))
+    @property
+    def str_found(self) -> str:
+        return ", ".join(map(str, self.found))
 
     @property
     def search(self) -> int:
@@ -76,9 +82,11 @@ class CebTirage(IUpdate):
 
     @search.setter
     def search(self, value: int):
+        if value == self._search:
+            return
         old = self._search
         self._search = value
-        self.update(old, value)
+        self.notify(old, value)
 
     def random(self) -> CebStatus:
         """
@@ -96,11 +104,12 @@ class CebTirage(IUpdate):
             [CebPlaque(liste_plaques.pop(randint(0, len(liste_plaques) - 1)), self) for _ in range(6)]
         return self.clear()
 
+    @property
     def json(self) -> str:
         return json.dumps(self.result)
 
     @property
-    def diff(self) -> int:
+    def ecart(self) -> int:
         return self._diff
 
     @property
@@ -133,7 +142,8 @@ class CebTirage(IUpdate):
 
     @plaques.setter
     def plaques(self, plq: List[int]):
-        self._plaques[:] = [CebPlaque(k) for k in plq]
+        for index, value in enumerate(plq[:6]):
+            self._plaques[index].value = value
         self.clear()
 
     def valid(self) -> CebStatus:
@@ -146,18 +156,16 @@ class CebTirage(IUpdate):
 
         :return: Le statut actuel de l'objet CebTirage, soit `CebStatus.Valide` soit `CebStatus.Invalide`.
         """
-        if 100 <= self._search <= 999 and len(self._plaques) == 6:
-            self._status = CebStatus.Valide
+        self._status = CebStatus.Valide if 100 <= self._search <= 999 and len(
+            self._plaques) == 6 else CebStatus.Invalide
+        if self._status == CebStatus.Valide:
             for plaque in self._plaques:
-                count_plaques: int = LISTEPLAQUES.count(plaque.value)
-                if count_plaques == 0 or count_plaques < self._plaques.count(plaque):
+                if LISTEPLAQUES.count(plaque.value) < self._plaques.count(plaque):
                     self._status = CebStatus.Invalide
                     break
-        else:
-            self._status = CebStatus.Invalide
         return self._status
 
-    def update(self, param1, param2):
+    def notify(self, param1, param2):
         self.clear()
 
     @property
@@ -182,7 +190,7 @@ class CebTirage(IUpdate):
             self._solutions.append(sol)
 
     def resolve(
-        self, plaques: List[int | CebPlaque] = (), search: int = 0
+            self, plaques: List[int | CebPlaque] = (), search: int = 0
     ) -> CebStatus:
         """
         Résout le problème en utilisant les plaques et la valeur de recherche fournies.
@@ -242,8 +250,9 @@ class CebTirage(IUpdate):
             Returns:
             List: A new list resulting from the operation and exclusion of specified elements
         """
-        def next_list(current_list: List, ceb_operation: CebOperation, i:int, j: int)-> List:
-            return [ceb_operation ]+[ x for k, x in enumerate(current_list) if k not in (i, j)]
+
+        def next_list(current_list: List, ceb_operation: CebOperation, ii: int, jj: int) -> List:
+            return [ceb_operation] + [x for k, x in enumerate(current_list) if k not in (ii, jj)]
 
         stack = [plaques]
         while stack:
@@ -254,18 +263,19 @@ class CebTirage(IUpdate):
                     q = current_liste[jx]
                     for operation in "x+-/":
                         oper: CebOperation = CebOperation(plq, operation, q)
-                        if oper.value != 0:
+                        if oper.value:
                             stack.append(next_list(current_liste, oper, ix, jx))
 
     @property
     def result(self) -> dict:
         return {
-            "Search": self.search,
-            "Plaques": [plq.value for plq in self._plaques],
-            "Status": self._status.name,
-            "Found": str(self.found),
-            "Diff": self.diff,
-            "Solutions": [str(sol) for sol in self.solutions],
+            "plaques": [k.value for k in self.plaques],
+            "search": self.search,
+            "status": cebstatus_to_str(self.status),
+            "found": self.found,
+            "ecart": self.ecart,
+            "count": self.count,
+            "solutions": [solution.operations for solution in self.solutions]
         }
 
     def __repr__(self):
@@ -273,7 +283,7 @@ class CebTirage(IUpdate):
 
     @staticmethod
     def solve(
-        plaques: List[int] = (), search: int = 0, auto: bool = False
+            plaques: List[int] = (), search: int = 0, auto: bool = False
     ) -> CebTirage:
         """
         Crée une instance de CebTirage et résout le problème.
@@ -286,6 +296,105 @@ class CebTirage(IUpdate):
         _tirage = CebTirage(plaques, search, auto)
         _tirage.resolve()
         return _tirage
+
+    def save_to_json(self, filename: str):
+        """
+        Sauvegarde les résultats du tirage dans un fichier JSON.
+
+        Args:
+            filename (str): Le nom du fichier dans lequel sauvegarder les résultats.
+        """
+
+        with open(filename, "w", encoding="utf-8") as file:
+            # noinspection PyTypeChecker
+            json.dump(self.result, file, ensure_ascii=False, indent=4)
+
+    def save_to_xml(self, filename: str):
+        """
+        Sauvegarde les résultats du tirage dans un fichier XML.
+
+        Args:
+            filename (str): Le nom du fichier dans lequel sauvegarder les résultats.
+        """
+        root = XML.Element("ceb")
+        plaques_element = XML.SubElement(root, "plaques")
+        for plaque in self.plaques:
+            XML.SubElement(plaques_element, "plaque").text = str(plaque)
+        XML.SubElement(root, "search").text = str(self.search)
+        XML.SubElement(root, "status").text = cebstatus_to_str(self.status)
+        XML.SubElement(root, "found").text = str(self.found)
+        XML.SubElement(root, "ecart").text = str(self.ecart)
+        XML.SubElement(root, "count").text = str(self.count)
+
+        solutions_element = XML.SubElement(root, "solutions")
+        for solution in self.solutions:
+            solution_element = XML.SubElement(solutions_element, "solution")
+            for operation in solution.operations:
+                XML.SubElement(solution_element, "operation").text = operation
+
+        tree = XML.ElementTree(root)
+        tree.write(filename, encoding="utf-8", xml_declaration=True)
+
+    def save_to_pickle(self, filename: str):
+        with open(filename, "wb") as file:
+            # noinspection PyTypeChecker
+            pickle.dump(self.result, file)
+
+    def save_to_csv(self, filename: str):
+        """
+        Sauvegarde les résultats du tirage dans un fichier CSV.
+
+        Args:
+            filename (str): Le nom du fichier dans lequel sauvegarder les résultats.
+        """
+        with open(filename, mode="w", newline="", encoding="utf-8") as file:
+            writer = csv.writer(file)
+            writer.writerow(["Plaques", "Search", "Status", "Found", "Ecart", "Count", "Solutions"])
+            writer.writerow([
+                ",".join(map(str, [k.value for k in self.plaques])),
+                self.search,
+                cebstatus_to_str(self.status),
+                ",".join(map(str, self.found)),
+                self.ecart,
+                self.count,
+                ";".join([" ".join(sol.operations) for sol in self.solutions])
+            ])
+
+    def save(self, filename: str):
+        """
+        Sauvegarde les résultats du tirage dans un fichier.
+
+        Args:
+            filename (str): Le nom du fichier dans lequel sauvegarder les résultats..
+        """
+        _, extension = os.path.splitext(filename)
+        save_methods = {
+            ".json": self.save_to_json,
+            ".xml": self.save_to_xml,
+            ".pkl": self.save_to_pickle,
+            ".csv": self.save_to_csv
+        }
+        method = save_methods.get(extension, self.save_to_json)
+        # noinspection PyArgumentList
+        method(filename)
+
+
+def cebstatus_to_str(status: CebStatus) -> str:
+    """
+    Convertit un objet CebStatus en chaîne de caractères.
+
+    Args:
+        status (CebStatus): L'objet CebStatus à convertir.
+
+    Returns:
+        str: La chaîne de caractères représentant l'objet CebStatus.
+    """
+    return {
+        CebStatus.EnCours: "⚙️ En cours",
+        CebStatus.CompteEstBon: "😀 Compte est bon",
+        CebStatus.CompteApproche: "🙄 Compte approché",
+        CebStatus.Invalide: " ❌ Invalide"
+    }.get(status, "Inconnu")
 
 
 def resolve(plaques: List[int] = (), search: int = 0, auto: bool = False) -> CebTirage:

@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import List
 
-from ceb.base import CebBase
-from ceb.inotify import INotify
+from .base import CebBase
+from .inotify import INotify
 
 LISTEPLAQUES: List[int] = [
     1,

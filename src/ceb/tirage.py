@@ -13,11 +13,11 @@ from random import randint
 from sys import maxsize
 from typing import List
 
-from ceb.base import CebBase
-from ceb.inotify import INotify
-from ceb.operation import CebOperation
-from ceb.plaque import CebPlaque, LISTEPLAQUES
-from ceb.status import CebStatus
+from .base import CebBase
+from .inotify import INotify
+from .operation import CebOperation
+from .plaque import CebPlaque, LISTEPLAQUES
+from .status import CebStatus
 
 class CebTirage(INotify):
     """
@@ -166,10 +166,23 @@ class CebTirage(INotify):
         return self._status
 
     def notify(self, param1, param2):
+        """
+        Notifie un changement de paramètre et réinitialise l'état de l'objet CebTirage.
+
+        Cette méthode appelle la méthode `clear` pour réinitialiser l'état de l'objet.
+
+        :param param1: Ancienne valeur du paramètre.
+        :param param2: Nouvelle valeur du paramètre.
+        """
         self.clear()
 
     @property
     def solution(self) -> CebBase | None:
+        """
+        Retourne la première solution trouvée si elle existe.
+
+        :return: La première solution trouvée ou None si aucune solution n'est disponible.
+        """
         return self.solutions[0] if self.count != 0 else None
 
     def _add_solution(self, sol: CebBase):
@@ -217,41 +230,31 @@ class CebTirage(INotify):
 
     async def resolve_async(self) -> CebStatus:
         """
-        Asynchronously resolves and returns a CebStatus object.
+        Résout le problème de manière asynchrone.
 
-        This method utilizes asyncio's `to_thread` to run the synchronous `resolve` method in a separate thread,
-        allowing for non-blocking execution in an asynchronous environment. It is particularly useful when dealing
-        with I/O-bound tasks that do not natively support asynchronous execution but can benefit from being
-        executed in a separate thread.
+        Cette méthode utilise `asyncio.to_thread` pour exécuter la méthode `resolve` dans un thread séparé.
 
-        Returns:
-            CebStatus: The result of the `resolve` method.
-
+        :return: Le statut actuel de l'objet CebTirage après résolution.
         """
         return await asyncio.to_thread(self.resolve)
 
     def resolve_stack(self, plaques: List) -> None:
         """
-        resolve_stack(plaques: List) -> None
-            Iterates through a list of plaques, applying a series of operations to each element and recursively processing the resulting lists until no more operations can be performed.
+        Résout le problème en utilisant une pile pour explorer toutes les combinaisons possibles de plaques et d'opérations.
 
-            Parameters:
-            plaques (List): The initial list of plaques to be processed
-
-        next_list(current_list: List, ceb_operation: CebOperation, i: int, j: int) -> List
-            Generates a new list by applying a given operation to elements at specified indices and excluding those elements from the resulting list.
-
-            Parameters:
-            current_list (List): The list currently being processed
-            ceb_operation (CebOperation): The operation to be applied to the elements at the specified indices
-            i (int): The first index to be operated on
-            j (int): The second index to be operated on
-
-            Returns:
-            List: A new list resulting from the operation and exclusion of specified elements
+        :param plaques: Liste de plaques à utiliser pour la résolution.
         """
 
         def next_list(current_list: List, ceb_operation: CebOperation, ii: int, jj: int) -> List:
+            """
+            Génère une nouvelle liste en appliquant une opération sur deux plaques et en excluant les plaques utilisées.
+
+            :param current_list: Liste actuelle de plaques.
+            :param ceb_operation: Opération à appliquer.
+            :param ii: Index de la première plaque.
+            :param jj: Index de la deuxième plaque.
+            :return: Nouvelle liste de plaques après application de l'opération.
+            """
             return [ceb_operation] + [x for k, x in enumerate(current_list) if k not in (ii, jj)]
 
         stack = [plaques]
@@ -268,6 +271,18 @@ class CebTirage(INotify):
 
     @property
     def result(self) -> dict:
+        """
+        Retourne un dictionnaire contenant les résultats du tirage.
+
+        :return: Un dictionnaire avec les clés suivantes:
+            - plaques: Liste des valeurs des plaques.
+            - search: Valeur de recherche.
+            - status: Statut actuel sous forme de chaîne de caractères.
+            - found: Liste des valeurs trouvées.
+            - ecart: Différence entre la valeur recherchée et la solution la plus proche.
+            - count: Nombre de solutions trouvées.
+            - solutions: Liste des opérations pour chaque solution.
+        """
         return {
             "plaques": [k.value for k in self.plaques],
             "search": self.search,
@@ -279,6 +294,11 @@ class CebTirage(INotify):
         }
 
     def __repr__(self):
+        """
+        Retourne une représentation JSON de l'objet CebTirage.
+
+        :return: Une chaîne JSON représentant l'objet CebTirage.
+        """
         return self.json
 
     @staticmethod

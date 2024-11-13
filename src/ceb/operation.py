@@ -1,28 +1,37 @@
 """
-  importation
+Module contenant la classe CebOperation pour représenter une opération.
 """
 from __future__ import annotations
 
-from ceb.base import CebBase
-
-OPER = "+" or "x" or "-" or "/"
+from .base import CebBase
 
 
 class CebOperation(CebBase):
+    """
+    Classe représentant une opération.
+
+    Attributes:
+        _value (int): La valeur résultante de l'opération.
+        _operations (list): Liste des opérations effectuées.
+    """
     """Class represente une opération"""
-    def __init__(self, g: CebBase, op: OPER, d: CebBase):
+    def __init__(self, g: CebBase, op: str, d: CebBase):
         """ 
-        Initialisation 
-        definir une Opération
-        @type g: CebBase
-        @type op: str (+-x/)
-        @type d: CebBase
+        Initialise une nouvelle instance de CebOperation.
+
+        Args:
+            g (CebBase): Le premier opérande.
+            op (str): L'opération à effectuer.
+            d (CebBase): Le second opérande.
         """
         super().__init__()
         if g.value < d.value:
             g, d = d, g
 
         match op:
+            # """
+            # Effectue l'opération spécifiée sur les opérandes.
+            # """
             case "+":
                 self._value = g.value + d.value
             case "-":
@@ -36,6 +45,9 @@ class CebOperation(CebBase):
             case _:
                 self._value = 0
         if self._value != 0:
+            """
+            Met à jour la liste des opérations si la valeur résultante n'est pas zéro.
+            """
             self._operations.clear()
             if isinstance(g, CebOperation):
                 self._operations.extend(g.operations)

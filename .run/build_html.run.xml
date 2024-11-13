@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="build_html" type="PowerShellRunType" factoryName="PowerShell" scriptUrl="C:\Users\Arnaud\Source\python\pyceb\sphinx\make.ps1" scriptParameters="html" executablePath="$PROJECT_DIR$/../../../../../Program Files/PowerShell/7/pwsh.exe">
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>

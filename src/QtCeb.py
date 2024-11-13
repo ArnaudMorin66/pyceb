@@ -14,9 +14,166 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                                QFileDialog)
 
 import ImgQtCeb
-from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus  # Assurez-vous que le module CebTirage est importé correctement
-from ceb.tirage import cebstatus_to_str
+from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus, \
+    cebstatus_to_str  # Assurez-vous que le module CebTirage est importé correctement
 from theme import ThemeManager
+
+
+class CebTirageModel(QAbstractTableModel):
+    """
+    Modèle de données pour afficher les solutions du tirage dans un QTableView.
+
+    Attributes:
+        _tirage (CebTirage): Instance de CebTirage contenant les solutions à afficher.
+    """
+
+    def __init__(self, tirage: CebTirage):
+        """
+        Initialise le modèle de données avec le tirage donné.
+
+        Args:
+            tirage (CebTirage): Instance de CebTirage contenant les solutions à afficher.
+        """
+        super().__init__()
+        self._tirage = tirage
+
+    def rowCount(self, parent=None):
+        """
+        Retourne le nombre de lignes dans le modèle.
+
+        Args:
+            parent: Non utilisé.
+
+        Returns:
+            int: Le nombre de solutions dans le tirage.
+        """
+        return len(self._tirage.solutions)
+
+    def columnCount(self, parent=None):
+        """
+        Retourne le nombre de colonnes dans le modèle.
+
+        Args:
+            parent: Non utilisé.
+
+        Returns:
+            int: Le nombre fixe de colonnes pour les opérations (5).
+        """
+        return 5  # Nombre fixe de colonnes pour les opérations
+
+    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
+        """
+        Retourne les données pour un index et un rôle donnés.
+
+        Args:
+            index (QModelIndex): L'index des données.
+            role (Qt.ItemDataRole): Le rôle pour lequel les données sont demandées.
+
+        Returns:
+            QVariant: Les données pour l'index et le rôle donnés.
+        """
+        match role:
+            case Qt.ItemDataRole.DisplayRole:
+                solution = self._tirage.solutions[index.row()]
+                if index.column() < len(solution.operations):
+                    return solution.operations[index.column()]
+            case Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignCenter
+            case Qt.ItemDataRole.BackgroundRole:
+                if index.row() % 2 == 1 \
+                        and self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
+                    return QColor(
+                        Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else Qt.GlobalColor.darkMagenta)
+            case Qt.ItemDataRole.ForegroundRole:
+                if index.row() % 2 == 1 \
+                        and self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
+                    return QColor(Qt.GlobalColor.white)
+        return None
+
+    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+        """
+        Retourne les données d'en-tête pour une section, une orientation et un rôle donnés.
+
+        Args:
+            section (int): La section de l'en-tête.
+            orientation (Qt.Orientation): L'orientation de l'en-tête.
+            role (Qt.ItemDataRole): Le rôle pour lequel les données d'en-tête sont demandées.
+
+        Returns:
+            QVariant: Les données d'en-tête pour la section, l'orientation et le rôle donnés.
+        """
+        match role:
+            case Qt.ItemDataRole.DisplayRole:
+                return ["Opération 1", "Opération 2", "Opération 3", "Opération 4", "Opération 5"][section] \
+                    if orientation == Qt.Orientation.Horizontal else str(section + 1)
+            case Qt.ItemDataRole.TextAlignmentRole:
+                return Qt.AlignmentFlag.AlignCenter
+            case Qt.ItemDataRole.BackgroundRole:
+                return QColor({
+                                  CebStatus.CompteEstBon: Qt.GlobalColor.darkGreen,
+                                  CebStatus.CompteApproche: Qt.GlobalColor.magenta
+                              }.get(self._tirage.status, Qt.GlobalColor.black))
+
+            case Qt.ItemDataRole.ForegroundRole:
+                return QColor(Qt.GlobalColor.white \
+                                  if self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche] \
+                                  else Qt.GlobalColor.white)
+
+        return None
+
+    def refresh(self):
+        """
+        Rafraîchit le modèle de données en émettant un signal de réinitialisation.
+        """
+        self.modelReset.emit()
+
+
+class SolutionDialog(QDialog):
+    """
+    Classe de boîte de dialogue pour afficher les solutions d'un tirage.
+
+    Args:
+        solution: La solution à afficher.
+        status: Le statut du tirage.
+    """
+
+    def __init__(self, solution, status):
+        """
+        Initialise la boîte de dialogue avec la solution et le statut donnés.
+
+        Args:
+            solution: La solution à afficher.
+            status: Le statut du tirage.
+        """
+        super().__init__()
+        #  ThemeManager(self)
+        self.setWindowTitle(cebstatus_to_str(status))
+        self.setModal(True)
+        layout = QGridLayout()
+        list_widget = QListWidget(self)
+        list_widget.setAlternatingRowColors(True)
+        list_widget.setItemAlignment(Qt.AlignmentFlag.AlignHCenter)
+        for operation in solution.operations:
+            item = QListWidgetItem(operation)
+            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            list_widget.addItem(item)
+        list_widget.mousePressEvent = self.mousePressEvent
+        layout.addWidget(list_widget)
+        self.setLayout(layout)
+        # Ajouter un timer pour fermer la boîte de dialogue après 5 secondes
+        self.timer = QTimer(self)
+        self.timer.setSingleShot(True)
+        self.timer.timeout.connect(self.accept)
+        self.timer.start(5000)
+
+    def mousePressEvent(self, event):
+        """
+        Gère l'événement de clic de souris pour fermer la boîte de dialogue.
+
+        Args:
+            event (QMouseEvent): L'événement de clic de souris.
+        """
+        self.accept()
 
 
 class CebMainTirage(QWidget):
@@ -31,157 +188,6 @@ class CebMainTirage(QWidget):
         _solutions_table (QTableView): QTableView pour afficher les solutions.
         _data_model (CebTirageModel): Modèle de données pour le QTableView.
     """
-
-    class CebTirageModel(QAbstractTableModel):
-        def __init__(self, tirage: CebTirage):
-            """
-            Initializes the model with the given tirage.
-
-            Args:
-                tirage (CebTirage): The tirage object containing the solutions.
-            """
-            super().__init__()
-            self._tirage = tirage
-
-        def rowCount(self, parent=None):
-            """
-            Returns the number of rows in the model.
-
-            Args:
-                parent (QModelIndex, optional): The parent index. Defaults to None.
-
-            Returns:
-                int: The number of rows.
-            """
-            return len(self._tirage.solutions)
-
-        def columnCount(self, parent=None):
-            """
-            Returns the number of columns in the model.
-
-            Args:
-                parent (QModelIndex, optional): The parent index. Defaults to None.
-
-            Returns:
-                int: The number of columns.
-            """
-            return 5  # Nombre fixe de colonnes pour les opérations
-
-        def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-            """
-            Returns the data for the given index and role.
-
-            Args:
-                index (QModelIndex): The index of the item.
-                role (Qt.ItemDataRole): The role for which the data is requested.
-
-            Returns:
-                Any: The data for the given index and role.
-            """
-            match role:
-                case Qt.ItemDataRole.DisplayRole:
-                    solution = self._tirage.solutions[index.row()]
-                    if index.column() < len(solution.operations):
-                        return solution.operations[index.column()]
-                case Qt.ItemDataRole.TextAlignmentRole:
-                    return Qt.AlignmentFlag.AlignCenter
-                case Qt.ItemDataRole.BackgroundRole:
-                    if index.row() % 2 == 1 \
-                            and self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-                        return QColor(
-                            Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else Qt.GlobalColor.darkMagenta)
-                case Qt.ItemDataRole.ForegroundRole:
-                    if index.row() % 2 == 1 \
-                            and self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-                        return QColor(Qt.GlobalColor.white)
-            return None
-
-        def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-            """
-            Returns the header data for the given section and orientation.
-
-            Args:
-                section (int): The section number.
-                orientation (Qt.Orientation): The orientation of the header (horizontal or vertical).
-                role (Qt.ItemDataRole): The role for which the data is requested.
-
-            Returns:
-                Any: The data for the header, depending on the role.
-            """
-            match role:
-                case Qt.ItemDataRole.DisplayRole:
-                    return ["Opération 1", "Opération 2", "Opération 3", "Opération 4", "Opération 5"][section] \
-                        if orientation == Qt.Orientation.Horizontal else str(section + 1)
-                case Qt.ItemDataRole.TextAlignmentRole:
-                    return Qt.AlignmentFlag.AlignCenter
-                case Qt.ItemDataRole.BackgroundRole:
-                    return QColor({
-                                      CebStatus.CompteEstBon: Qt.GlobalColor.darkGreen,
-                                      CebStatus.CompteApproche: Qt.GlobalColor.magenta
-                                  }.get(self._tirage.status, Qt.GlobalColor.black))
-
-                case Qt.ItemDataRole.ForegroundRole:
-                    return QColor(Qt.GlobalColor.white \
-                                      if self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche] \
-                                      else Qt.GlobalColor.white)
-
-            return None
-
-        def refresh(self):
-            """
-            Émet un signal pour réinitialiser le modèle de données.
-
-            Cette méthode émet le signal `modelReset` pour indiquer que les données du modèle ont été mises à jour
-            et que la vue associée doit être réinitialisée pour refléter les nouvelles données.
-            """
-            self.modelReset.emit()
-
-    class SolutionDialog(QDialog):
-        """
-        Classe de boîte de dialogue pour afficher les solutions d'un tirage.
-
-        Args:
-            solution: La solution à afficher.
-            status: Le statut du tirage.
-        """
-
-        def __init__(self, solution, status):
-            """
-            Initialise la boîte de dialogue avec la solution et le statut donnés.
-
-            Args:
-                solution: La solution à afficher.
-                status: Le statut du tirage.
-            """
-            super().__init__()
-            #  ThemeManager(self)
-            self.setWindowTitle(cebstatus_to_str(status))
-            self.setModal(True)
-            layout = QGridLayout()
-            list_widget = QListWidget(self)
-            list_widget.setAlternatingRowColors(True)
-            list_widget.setItemAlignment(Qt.AlignmentFlag.AlignHCenter)
-            for operation in solution.operations:
-                item = QListWidgetItem(operation)
-                item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                list_widget.addItem(item)
-            list_widget.mousePressEvent = self.mousePressEvent
-            layout.addWidget(list_widget)
-            self.setLayout(layout)
-            # Ajouter un timer pour fermer la boîte de dialogue après 5 secondes
-            self.timer = QTimer(self)
-            self.timer.setSingleShot(True)
-            self.timer.timeout.connect(self.accept)
-            self.timer.start(5000)
-
-        def mousePressEvent(self, event):
-            """
-            Gère l'événement de clic de souris pour fermer la boîte de dialogue.
-
-            Args:
-                event (QMouseEvent): L'événement de clic de souris.
-            """
-            self.accept()
 
     tirage = CebTirage()
     _plaques_inputs: List[QComboBox] = []
@@ -220,13 +226,13 @@ class CebMainTirage(QWidget):
 
         actions = [
             ("Résoudre", "Ctrl+R", self.solve, "calculer.png"),
-            ("Hasard", "Ctrl+H", self.random,"alea.png"),
-            ("Basculer Thème", "Ctrl+T", self.toggle_mode,"yin-yang.png"),
-            ("Sauvegarder", "Ctrl+S", self.save_results_dialog,"save.png"),
-            ("","",None,""),
-            ("Quitter", "Ctrl+Q", self.close,"quitter.png"),
-            ("","",None,""),
-            ("A propos", "Ctrl+A", self.apropos,"favicon2.png")
+            ("Hasard", "Ctrl+H", self.random, "alea.png"),
+            ("Basculer Thème", "Ctrl+T", self.toggle_mode, "yin-yang.png"),
+            ("Sauvegarder", "Ctrl+S", self.save_results_dialog, "save.png"),
+            ("", "", None, ""),
+            ("Quitter", "Ctrl+Q", self.close, "quitter.png"),
+            ("", "", None, ""),
+            ("A propos", "Ctrl+A", self.apropos, "apropos.png")
         ]
 
         for name, shortcut, method, icon in actions:
@@ -248,7 +254,7 @@ class CebMainTirage(QWidget):
 
         filename, _ = QFileDialog.getSaveFileName(self, "Sauvegarder les résultats", "",
                                                   "JSON Files (*.json);;XML Files (*.xml);; Pickle Files (*.pkl);; CSV Files (*.csv)",
-                                                )
+                                                  )
         if filename:
             self.tirage.save(filename)
             try:
@@ -329,6 +335,7 @@ class CebMainTirage(QWidget):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
+
         def combobox_model():
             """
             Crée un modèle de données pour les QComboBox.
@@ -396,7 +403,7 @@ class CebMainTirage(QWidget):
             Self: L'instance actuelle de `CebMainTirage`.
         """
         self._solutions_table = QTableView()
-        self._data_model = self.CebTirageModel(self.tirage)
+        self._data_model = CebTirageModel(self.tirage)
         self._solutions_table.setModel(self._data_model)
         self._solutions_table.setShowGrid(True)
         self._solutions_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
@@ -472,7 +479,7 @@ class CebMainTirage(QWidget):
             _ (QModelIndex): L'index de la ligne précédemment sélectionnée.
         """
         if QApplication.mouseButtons() == Qt.MouseButton.LeftButton:
-            self.SolutionDialog(self.tirage.solutions[current.row()], self.tirage.status).exec()
+            SolutionDialog(self.tirage.solutions[current.row()], self.tirage.status).exec()
 
     @Slot()
     def random(self):
@@ -588,7 +595,7 @@ class CebMainTirage(QWidget):
             self._data_model.refresh()
 
             if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-                self.SolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
+                SolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
 
 
         except Exception as e:
@@ -626,7 +633,7 @@ if __name__ == "__main__":
     app.setApplicationVersion("1.0")
     app.setOrganizationName("© Arnaud Morin")
     img = ImgQtCeb.qInitResources()
-    app.setWindowIcon(QIcon(":/images/favicon2.png"))
+    app.setWindowIcon(QIcon(":/images/apropos.png"))
     mainwindow = CebMainTirage()
     mainwindow.show()
     app.exec()

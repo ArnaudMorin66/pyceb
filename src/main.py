@@ -14,9 +14,11 @@ from zipfile import ZipFile, ZIP_LZMA
 
 import keyboard
 
+from qtceb import QtCeb
 from ceb import CebTirage, CebStatus
 
-
+from rich.console import Console
+from rich.table import Table
 def exec_time(fun: Callable, *vals: object) -> tuple[int, any]:
     """
     Mesure le temps d'exécution d'une fonction.
@@ -41,8 +43,10 @@ class CompteEstBon:
         """
         Initialise les arguments de la ligne de commande et le tirage.
         """
+        self.console = Console()
         self.wait = False
         self.parser = ArgumentParser(description="Compte est bon")
+        self.parser.add_argument("-q", "--qt", dest="qt", type=bool, action=BooleanOptionalAction, help="qt", default=False)
         self.parser.add_argument("-p", "--plaques", nargs="+", type=int, help="plaques", default=[])
         self.parser.add_argument("-s", "--search", dest="search", help="Valeur à chercher", type=int, default=0)
         self.parser.add_argument("-j", "--json", dest="extract_json", action=BooleanOptionalAction, type=bool, help="affichage du tirage", default=False)
@@ -50,6 +54,9 @@ class CompteEstBon:
         self.parser.add_argument("integers", metavar="N", type=int, nargs="*", help="plaques & valeur à chercher")
         self.parser.add_argument("-S", "--save", dest="save_data", type=bool, action=BooleanOptionalAction, help="Sauvegarde du tirage", default=None)
         self.args = self.parser.parse_args()
+        if self.args.qt:
+            QtCeb.run()
+            sys.exit(0)
         self.tirage = CebTirage()
 
     def configure_tirage(self):
@@ -83,32 +90,34 @@ class CompteEstBon:
         """
         if self.args.extract_json:
             self.tirage.resolve()
-            print(self.tirage.json)
+            self.console.print(self.tirage.json, style="bold green")
         else:
-            print("#### Tirage du compte est bon ####")
-            print("Tirage:", end=" ")
-            print(*self.tirage.plaques, sep=", ", end="\t")
-            print(f"Recherche: {self.tirage.search}")
+            self.console.print("#### Tirage du compte est bon ####", style="bold blue")
+            self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.search}", style="bold yellow")
 
             ellapsed, status = exec_time(self.tirage.resolve)
-            print()
+            self.console.print()
 
             match status:
                 case CebStatus.CompteEstBon:
-                    print(f"Le Compte est bon", end=", ")
+                    self.console.print("Le Compte est bon", style="bold green")
                 case CebStatus.CompteApproche:
-                    print(f"Compte approché: {self.tirage.found}", end=", ")
+                    self.console.print(f"Compte approché: {self.tirage.found}", style="bold yellow")
                 case _:
-                    print("Tirage invalide", end=", ")
-
-            print(f"nombre de solutions trouvées: {self.tirage.count}", end=", ")
-            print(f"Durée du calcul: {ellapsed / 1.E+09: 0.3f} s")
+                    self.console.print("Tirage invalide", style="bold red")
+            color = "green" if self.tirage.status == CebStatus.CompteEstBon else "yellow"
+            self.console.print(f"Nombre de solutions trouvées: {self.tirage.count}", style=f"bold {color}")
+            self.console.print(f"Durée du calcul: {ellapsed / 1.E+09: 0.3f} s", style=f"bold {color}")
             if self.tirage.count > 0:
-                print("\nSolutions:")
+                table = Table(title="Solutions")
+                for col in ["Index", "Opération 1", "Opération 2", "Opération 3", "Opération 4", "Opération 5"]:
+                    table.add_column(col, style=color, no_wrap=True)
+
                 for i, s in enumerate(self.tirage.solutions):
-                    print(f" {i + 1}/{self.tirage.count} ({s.rank}) {'$' if self.tirage.status == CebStatus.CompteEstBon else '~'} {s}")
-            print()
-            print()
+                    table.add_row(str(i + 1), s.op1, s.op2, s.op3, s.op4, s.op5)
+
+                self.console.print(table)
+            self.console.print()
 
     def search_file(self):
         """

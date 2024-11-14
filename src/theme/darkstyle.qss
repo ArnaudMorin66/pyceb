@@ -25,7 +25,7 @@ Resetting everything helps to unify styles across different operating systems
 * {
   padding: 0px;
   margin: 0px;
-  border: 0px;
+  border: 0px solid #19232D;
   border-style: none;
   border-image: none;
   outline: 0;

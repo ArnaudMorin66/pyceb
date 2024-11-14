@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                                QHeaderView, QGridLayout, QLabel, QDialog, QListWidget, QListWidgetItem, QMenu,
                                QFileDialog)
 
-import ImgQtCeb
+import cebressources
 from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus, \
     cebstatus_to_str  # Assurez-vous que le module CebTirage est importé correctement
 from theme import ThemeManager
@@ -80,13 +80,11 @@ class CebTirageModel(QAbstractTableModel):
             case Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
             case Qt.ItemDataRole.BackgroundRole:
-                if index.row() % 2 == 1 \
-                        and self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
+                if index.row() % 2 == 1:
                     return QColor(
-                        Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else Qt.GlobalColor.darkMagenta)
+                        Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor("saddlebrown"))
             case Qt.ItemDataRole.ForegroundRole:
-                if index.row() % 2 == 1 \
-                        and self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
+                if index.row() % 2 == 1:
                     return QColor(Qt.GlobalColor.white)
         return None
 
@@ -111,7 +109,7 @@ class CebTirageModel(QAbstractTableModel):
             case Qt.ItemDataRole.BackgroundRole:
                 return QColor({
                                   CebStatus.CompteEstBon: Qt.GlobalColor.darkGreen,
-                                  CebStatus.CompteApproche: Qt.GlobalColor.magenta
+                                  CebStatus.CompteApproche: "saddlebrown"
                               }.get(self._tirage.status, Qt.GlobalColor.black))
 
             case Qt.ItemDataRole.ForegroundRole:
@@ -176,7 +174,7 @@ class SolutionDialog(QDialog):
         self.accept()
 
 
-class CebMainTirage(QWidget):
+class QtCeb(QWidget):
     """
     Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
 
@@ -450,7 +448,7 @@ class CebMainTirage(QWidget):
         """
         color = {
             CebStatus.CompteEstBon: "green",
-            CebStatus.CompteApproche: "magenta",
+            CebStatus.CompteApproche: "saddlebrown",
             CebStatus.Invalide: "red"
         }.get(self.tirage.status, "black")
 
@@ -623,17 +621,27 @@ class CebMainTirage(QWidget):
                           QApplication.applicationName() + " v" + QApplication.applicationVersion() + "\n" + "Auteur: " + QApplication.organizationName() + "\n" + "Date: " + time.strftime(
                               "%d/%m/%Y %H:%M:%S"))
 
+    @staticmethod
+    def run():
+        """
+        Initialise et exécute l'application principale.
+
+        Cette fonction configure les paramètres régionaux, crée l'application principale,
+        initialise les ressources, configure l'icône de la fenêtre, et affiche la fenêtre principale.
+        Elle exécute ensuite la boucle d'événements de l'application.
+        """
+        locale.setlocale(locale.LC_NUMERIC, 'fr_FR.UTF-8')
+        # Crée et exécute l'application principale
+        app = QApplication(sys.argv)
+        app.setApplicationName("Jeux du Compte est bon")
+        app.setApplicationVersion("1.0")
+        app.setOrganizationName("© Arnaud Morin")
+        cebressources.qInitResources()
+        app.setWindowIcon(QIcon(":/images/apropos.png"))
+        mainwindow = QtCeb()
+        mainwindow.show()
+        app.exec()
+        sys.exit(0)
 
 if __name__ == "__main__":
-    locale.setlocale(locale.LC_NUMERIC, 'fr_FR.UTF-8')
-
-    # Crée et exécute l'application principale
-    app = QApplication(sys.argv)
-    app.setApplicationName("Jeux du Compte est bon")
-    app.setApplicationVersion("1.0")
-    app.setOrganizationName("© Arnaud Morin")
-    img = ImgQtCeb.qInitResources()
-    app.setWindowIcon(QIcon(":/images/apropos.png"))
-    mainwindow = CebMainTirage()
-    mainwindow.show()
-    app.exec()
+    QtCeb.run()

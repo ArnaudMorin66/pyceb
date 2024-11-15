@@ -1,3 +1,5 @@
+import glob
+import os
 from enum import Enum
 
 from PySide6.QtWidgets import QWidget, QApplication
@@ -81,9 +83,6 @@ class ThemeManager:
         """
         global current_theme
         nom = "light" if self.value == Theme.light else "dark"
-        with open(f"theme/{nom}style.qss", "r") as f:
+        filename = f"{os.path.dirname(__file__)}{os.sep}theme{os.sep}{nom}style.qss"
+        with open(filename, "r") as f:
             QApplication.instance().setStyleSheet(f.read())
-            # self.window.setStyleSheet(f.read())
-
-
-

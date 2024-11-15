@@ -286,7 +286,7 @@ class CebTirage(INotify):
         return {
             "plaques": [k.value for k in self.plaques],
             "search": self.search,
-            "status": cebstatus_to_str(self.status),
+            "status": str(self.status),
             "found": self.found,
             "ecart": self.ecart,
             "count": self.count,
@@ -341,7 +341,7 @@ class CebTirage(INotify):
         for plaque in self.plaques:
             XML.SubElement(plaques_element, "plaque").text = str(plaque)
         XML.SubElement(root, "search").text = str(self.search)
-        XML.SubElement(root, "status").text = cebstatus_to_str(self.status)
+        XML.SubElement(root, "status").text = str(self.status)
         XML.SubElement(root, "found").text = str(self.found)
         XML.SubElement(root, "ecart").text = str(self.ecart)
         XML.SubElement(root, "count").text = str(self.count)
@@ -373,7 +373,7 @@ class CebTirage(INotify):
             writer.writerow([
                 ",".join(map(str, [k.value for k in self.plaques])),
                 self.search,
-                cebstatus_to_str(self.status),
+                str(self.status),
                 ",".join(map(str, self.found)),
                 self.ecart,
                 self.count,
@@ -399,22 +399,7 @@ class CebTirage(INotify):
         method(filename)
 
 
-def cebstatus_to_str(status: CebStatus) -> str:
-    """
-    Convertit un objet CebStatus en chaîne de caractères.
 
-    Args:
-        status (CebStatus): L'objet CebStatus à convertir.
-
-    Returns:
-        str: La chaîne de caractères représentant l'objet CebStatus.
-    """
-    return {
-        CebStatus.EnCours: "⚙️ En cours",
-        CebStatus.CompteEstBon: "😀 Compte est bon",
-        CebStatus.CompteApproche: "🙄 Compte approché",
-        CebStatus.Invalide: " ❌ Invalide"
-    }.get(status, "Inconnu")
 
 
 def resolve(plaques: List[int] = (), search: int = 0, auto: bool = False) -> CebTirage:

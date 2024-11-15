@@ -1,0 +1,4 @@
+SolutionDialog
+==============
+
+.. automodule:: qt.dialog

@@ -25,3 +25,17 @@ class CebStatus(Enum):
 
     Invalide = 5
     """Le compte est invalide."""
+
+    def __str__(self) -> str:
+        """
+        Retourne une représentation en chaîne de caractères de l'état du compte.
+
+        Returns:
+            str: Une chaîne de caractères représentant l'état du compte.
+        """
+        return {
+            CebStatus.EnCours: "⚙️ En cours",
+            CebStatus.CompteEstBon: "😀 Compte est bon",
+            CebStatus.CompteApproche: "🙄 Compte approché",
+            CebStatus.Invalide: " ❌ Invalide"
+        }.get(self, "Inconnu")

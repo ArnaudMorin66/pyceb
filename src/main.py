@@ -11,14 +11,12 @@ from argparse import ArgumentParser, BooleanOptionalAction
 from json import load
 from typing import Callable
 from zipfile import ZipFile, ZIP_LZMA
-
 import keyboard
-
-from qtceb import QtCeb
-from ceb import CebTirage, CebStatus
-
 from rich.console import Console
 from rich.table import Table
+
+from ceb import CebTirage, CebStatus
+from qt.qtceb import QtCeb
 def exec_time(fun: Callable, *vals: object) -> tuple[int, any]:
     """
     Mesure le temps d'exécution d'une fonction.
@@ -27,7 +25,7 @@ def exec_time(fun: Callable, *vals: object) -> tuple[int, any]:
         fun (Callable): La fonction à exécuter.
         *vals (object): Les arguments de la fonction.
 
-    Returns:
+    Returns
         tuple[int, any]: Le temps d'exécution en nanosecondes et le résultat de la fonction.
     """
     timer: int = time.process_time_ns()
@@ -39,25 +37,37 @@ class CompteEstBon:
     """
     Classe principale pour le jeu du Compte est bon.
     """
+
     def __init__(self):
         """
         Initialise les arguments de la ligne de commande et le tirage.
+        usage: main.py [-h] [-q | --qt | --no-qt] [-p PLAQUES [PLAQUES ...]] [-s SEARCH] [-j | --json | --no-json] [-w | --wait | --no-wait] [-S | --save | --no-save] [N ...]
+
         """
+        self.args = None
+        self.parser = None
         self.console = Console()
         self.wait = False
+        self.parse_args()
+        self.tirage = CebTirage()
+
+    def parse_args(self):
+        """Analyse les arguments de la ligne de commande."""
         self.parser = ArgumentParser(description="Compte est bon")
-        self.parser.add_argument("-q", "--qt", dest="qt", type=bool, action=BooleanOptionalAction, help="qt", default=False)
+        self.parser.add_argument("-q", "--qt", type=bool, action=BooleanOptionalAction, help="qt", default=False)
         self.parser.add_argument("-p", "--plaques", nargs="+", type=int, help="plaques", default=[])
-        self.parser.add_argument("-s", "--search", dest="search", help="Valeur à chercher", type=int, default=0)
-        self.parser.add_argument("-j", "--json", dest="extract_json", action=BooleanOptionalAction, type=bool, help="affichage du tirage", default=False)
-        self.parser.add_argument("-w", "--wait", dest="wait", type=bool, action=BooleanOptionalAction, help="attendre retour", default=False)
+        self.parser.add_argument("-s", "--search", type=int, help="Valeur à chercher", default=0)
+        self.parser.add_argument("-j", "--json", type=bool, action=BooleanOptionalAction, help="affichage du tirage",
+                                 default=False)
+        self.parser.add_argument("-w", "--wait", type=bool, action=BooleanOptionalAction, help="attendre retour",
+                                 default=False)
         self.parser.add_argument("integers", metavar="N", type=int, nargs="*", help="plaques & valeur à chercher")
-        self.parser.add_argument("-S", "--save", dest="save_data", type=bool, action=BooleanOptionalAction, help="Sauvegarde du tirage", default=None)
+        self.parser.add_argument("-S", "--save", type=bool, action=BooleanOptionalAction, help="Sauvegarde du tirage",
+                                 default=None)
         self.args = self.parser.parse_args()
         if self.args.qt:
             QtCeb.run()
             sys.exit(0)
-        self.tirage = CebTirage()
 
     def configure_tirage(self):
         """
@@ -88,12 +98,13 @@ class CompteEstBon:
         """
         Affiche le tirage et les résultats du calcul.
         """
-        if self.args.extract_json:
+        if self.args.json:
             self.tirage.resolve()
             self.console.print(self.tirage.json, style="bold green")
         else:
             self.console.print("#### Tirage du compte est bon ####", style="bold blue")
-            self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.search}", style="bold yellow")
+            self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.search}",
+                               style="bold yellow")
 
             ellapsed, status = exec_time(self.tirage.resolve)
             self.console.print()
@@ -142,7 +153,7 @@ class CompteEstBon:
             with open(file_config, mode="r", encoding="utf-8") as fp:
                 config = load(fp)
             sauvegarde = True
-            match self.args.save_data:
+            match self.args.save:
                 case None:
                     save = config["save"]
                     if not save:
@@ -157,15 +168,15 @@ class CompteEstBon:
                 if zipfile != "":
                     with ZipFile(zipfile, mode="a", compression=ZIP_LZMA) as fzip:
                         num = (
-                            max(
-                                [0]
-                                + [
-                                    int(g)
-                                    for g in [f[0: f.rfind(".")] for f in fzip.namelist()]
-                                    if g.isdigit()
-                                ]
-                            )
-                            + 1
+                                max(
+                                    [0]
+                                    + [
+                                        int(g)
+                                        for g in [f[0: f.rfind(".")] for f in fzip.namelist()]
+                                        if g.isdigit()
+                                    ]
+                                )
+                                + 1
                         )
                     jsonfile = f"{num: 06}.json"
                     fzip.writestr(jsonfile, self.tirage.json)
@@ -193,6 +204,7 @@ class CompteEstBon:
         else:
             print("\n")
         return 0
+
 
 if __name__ == "__main__":
     """

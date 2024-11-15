@@ -6,193 +6,39 @@ import sys
 import time
 from typing import List, Self
 
-from PySide6.QtCore import Slot, Qt, QAbstractTableModel, QElapsedTimer, QTimer, QModelIndex, QStringListModel
-from PySide6.QtGui import QKeyEvent, QColor, QIcon, QAction, QKeySequence
+from PySide6.QtCore import Slot, Qt, QElapsedTimer, QModelIndex, QStringListModel
+from PySide6.QtGui import QKeyEvent, QIcon, QAction, QKeySequence
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
                                QHBoxLayout, QComboBox, QSpinBox, QLayout, QTableView,
-                               QHeaderView, QGridLayout, QLabel, QDialog, QListWidget, QListWidgetItem, QMenu,
+                               QHeaderView, QGridLayout, QLabel, QMenu,
                                QFileDialog)
 
-import cebressources
-from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus, \
-    cebstatus_to_str  # Assurez-vous que le module CebTirage est importé correctement
-from theme import ThemeManager
-
-
-class CebTirageModel(QAbstractTableModel):
-    """
-    Modèle de données pour afficher les solutions du tirage dans un QTableView.
-
-    Attributes:
-        _tirage (CebTirage): Instance de CebTirage contenant les solutions à afficher.
-    """
-
-    def __init__(self, tirage: CebTirage):
-        """
-        Initialise le modèle de données avec le tirage donné.
-
-        Args:
-            tirage (CebTirage): Instance de CebTirage contenant les solutions à afficher.
-        """
-        super().__init__()
-        self._tirage = tirage
-
-    def rowCount(self, parent=None):
-        """
-        Retourne le nombre de lignes dans le modèle.
-
-        Args:
-            parent: Non utilisé.
-
-        Returns:
-            int: Le nombre de solutions dans le tirage.
-        """
-        return len(self._tirage.solutions)
-
-    def columnCount(self, parent=None):
-        """
-        Retourne le nombre de colonnes dans le modèle.
-
-        Args:
-            parent: Non utilisé.
-
-        Returns:
-            int: Le nombre fixe de colonnes pour les opérations (5).
-        """
-        return 5  # Nombre fixe de colonnes pour les opérations
-
-    def data(self, index, role=Qt.ItemDataRole.DisplayRole):
-        """
-        Retourne les données pour un index et un rôle donnés.
-
-        Args:
-            index (QModelIndex): L'index des données.
-            role (Qt.ItemDataRole): Le rôle pour lequel les données sont demandées.
-
-        Returns:
-            QVariant: Les données pour l'index et le rôle donnés.
-        """
-        match role:
-            case Qt.ItemDataRole.DisplayRole:
-                solution = self._tirage.solutions[index.row()]
-                if index.column() < len(solution.operations):
-                    return solution.operations[index.column()]
-            case Qt.ItemDataRole.TextAlignmentRole:
-                return Qt.AlignmentFlag.AlignCenter
-            case Qt.ItemDataRole.BackgroundRole:
-                if index.row() % 2 == 1:
-                    return QColor(
-                        Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor("saddlebrown"))
-            case Qt.ItemDataRole.ForegroundRole:
-                if index.row() % 2 == 1:
-                    return QColor(Qt.GlobalColor.white)
-        return None
-
-    def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
-        """
-        Retourne les données d'en-tête pour une section, une orientation et un rôle donnés.
-
-        Args:
-            section (int): La section de l'en-tête.
-            orientation (Qt.Orientation): L'orientation de l'en-tête.
-            role (Qt.ItemDataRole): Le rôle pour lequel les données d'en-tête sont demandées.
-
-        Returns:
-            QVariant: Les données d'en-tête pour la section, l'orientation et le rôle donnés.
-        """
-        match role:
-            case Qt.ItemDataRole.DisplayRole:
-                return ["Opération 1", "Opération 2", "Opération 3", "Opération 4", "Opération 5"][section] \
-                    if orientation == Qt.Orientation.Horizontal else str(section + 1)
-            case Qt.ItemDataRole.TextAlignmentRole:
-                return Qt.AlignmentFlag.AlignCenter
-            case Qt.ItemDataRole.BackgroundRole:
-                return QColor({
-                                  CebStatus.CompteEstBon: Qt.GlobalColor.darkGreen,
-                                  CebStatus.CompteApproche: "saddlebrown"
-                              }.get(self._tirage.status, Qt.GlobalColor.black))
-
-            case Qt.ItemDataRole.ForegroundRole:
-                return QColor(Qt.GlobalColor.white \
-                                  if self._tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche] \
-                                  else Qt.GlobalColor.white)
-
-        return None
-
-    def refresh(self):
-        """
-        Rafraîchit le modèle de données en émettant un signal de réinitialisation.
-        """
-        self.modelReset.emit()
-
-
-class SolutionDialog(QDialog):
-    """
-    Classe de boîte de dialogue pour afficher les solutions d'un tirage.
-
-    Args:
-        solution: La solution à afficher.
-        status: Le statut du tirage.
-    """
-
-    def __init__(self, solution, status):
-        """
-        Initialise la boîte de dialogue avec la solution et le statut donnés.
-
-        Args:
-            solution: La solution à afficher.
-            status: Le statut du tirage.
-        """
-        super().__init__()
-        #  ThemeManager(self)
-        self.setWindowTitle(cebstatus_to_str(status))
-        self.setModal(True)
-        layout = QGridLayout()
-        list_widget = QListWidget(self)
-        list_widget.setAlternatingRowColors(True)
-        list_widget.setItemAlignment(Qt.AlignmentFlag.AlignHCenter)
-        for operation in solution.operations:
-            item = QListWidgetItem(operation)
-            item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            list_widget.addItem(item)
-        list_widget.mousePressEvent = self.mousePressEvent
-        layout.addWidget(list_widget)
-        self.setLayout(layout)
-        # Ajouter un timer pour fermer la boîte de dialogue après 5 secondes
-        self.timer = QTimer(self)
-        self.timer.setSingleShot(True)
-        self.timer.timeout.connect(self.accept)
-        self.timer.start(5000)
-
-    def mousePressEvent(self, event):
-        """
-        Gère l'événement de clic de souris pour fermer la boîte de dialogue.
-
-        Args:
-            event (QMouseEvent): L'événement de clic de souris.
-        """
-        self.accept()
+from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus
+from qt import cebressources
+from qt.dialog import SolutionDialog
+from qt.model import CebTirageModel
+from qt.theme import ThemeManager
 
 
 class QtCeb(QWidget):
     """
     Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
-
-    Attributs:
-        tirage (CebTirage): Instance de CebTirage pour gérer le tirage actuel.
-        _plaques_inputs (List[QComboBox]): Liste des QComboBox pour les plaques.
-        _labels_results (List[QLabel]): Liste des QLabel pour afficher les résultats.
-        _search_input (QSpinBox): QSpinBox pour la valeur de recherche.
-        _solutions_table (QTableView): QTableView pour afficher les solutions.
-        _data_model (CebTirageModel): Modèle de données pour le QTableView.
     """
 
-    tirage = CebTirage()
-    _plaques_inputs: List[QComboBox] = []
-    _labels_results: List[QLabel] = []
-    _search_input: QSpinBox
-    _solutions_table: QTableView
-    _data_model: CebTirageModel
+
+    tirage: CebTirage  #:  Instance de CebTirage pour gérer le tirage actuel.
+
+    plaques_inputs: List[QComboBox] = [] #: Liste des QComboBox pour les plaques.
+
+    labels_results: List[QLabel] = []   #: Liste des QLabel pour afficher les résultats.
+
+    search_input: QSpinBox #: QSpinBox pour la valeur de recherche.
+
+    solutions_table: QTableView #: QTableView pour afficher les solutions.
+
+    data_model: CebTirageModel #: Modèle de données pour le QTableView.
+
+    context_menu: QMenu #: Menu contextuel pour les actions de l'application.
 
     def __init__(self):
         """
@@ -202,26 +48,29 @@ class QtCeb(QWidget):
         et ajoute les différents layouts pour les entrées, commandes, résultats et solutions.
         """
         super().__init__()
-        self.setWindowTitle("Jeux du Compte est bon")
-        self.setMinimumSize(800, 400)
-        self.theme_manager = ThemeManager(self)
-        self.tirageform_layout = QVBoxLayout()
+        self.tirage = CebTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
+        self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
+        self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
+        self.theme_manager = ThemeManager(self)  # Initialise le gestionnaire de thème.
+        self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
         self.add_inputs_layout() \
             .add_command_layout() \
             .add_result_layout() \
-            .add_solutions_table()
-        self.setLayout(self.tirageform_layout)
-        self.update_inputs()
+            .add_solutions_table()  # Ajoute les différents layouts à la fenêtre principale.
+        self.setLayout(self.tirageform_layout)  # Définit le layout principal de la fenêtre.
+        self.update_inputs()  # Met à jour les entrées de l'interface utilisateur avec les valeurs actuelles du tirage.
+        self.set_context_menu()  # Configure le menu contextuel de l'application.
 
-    def contextMenuEvent(self, event):
+    def set_context_menu(self):
         """
-        Gère l'événement de menu contextuel pour afficher un menu contextuel personnalisé.
+        Sets up the context menu with actions and their corresponding keyboard shortcuts.
 
-        Args:
-            event (QContextMenuEvent): L'événement de menu contextuel.
+        This method creates a QMenu and populates it with QAction items, each associated with a
+        specific method and keyboard shortcut. Icons are also set for each action.
         """
-        context_menu = QMenu(self)
+        self.context_menu = QMenu(self)
 
+        #:  List of actions with their names, shortcuts, methods, and icons
         actions = [
             ("Résoudre", "Ctrl+R", self.solve, "calculer.png"),
             ("Hasard", "Ctrl+H", self.random, "alea.png"),
@@ -233,17 +82,26 @@ class QtCeb(QWidget):
             ("A propos", "Ctrl+A", self.apropos, "apropos.png")
         ]
 
+        #: Iterate through the actions and add them to the context menu
         for name, shortcut, method, icon in actions:
             if name == "":
-                context_menu.addSeparator()
+                self.context_menu.addSeparator()
                 continue
             action = QAction(name, self)
             action.setIcon(QIcon(f":/images/{icon}"))
             action.setShortcut(QKeySequence(shortcut))
             action.triggered.connect(method)
-            context_menu.addAction(action)
+            self.context_menu.addAction(action)
 
-        context_menu.exec(event.globalPos())
+    def contextMenuEvent(self, event):
+        """
+        Gère l'événement de menu contextuel pour afficher un menu contextuel personnalisé.
+
+        Args:
+            event (QContextMenuEvent): L'événement de menu contextuel.
+        """
+
+        self.context_menu.exec(event.globalPos())
 
     def save_results_dialog(self):
         """
@@ -256,12 +114,12 @@ class QtCeb(QWidget):
         if filename:
             self.tirage.save(filename)
             try:
-                if platform.system() == 'Windows':
+                if platform.system() == "Windows":
                     os.startfile(filename)
-                elif platform.system() == 'Darwin':  # macOS
-                    subprocess.call(('open', filename))
+                elif platform.system() == "Darwin":  # macOS
+                    subprocess.call(("open", filename))
                 else:  # Linux
-                    subprocess.call(('xdg-open', filename))
+                    subprocess.call(("xdg-open", filename))
             except Exception as e:
                 print(f"Erreur lors de l'ouverture du fichier : {e}")
 
@@ -357,6 +215,7 @@ class QtCeb(QWidget):
             """
             combo_box = QComboBox()
             combo_box.setModel(model)
+            combo_box.setEditable(True)
             combo_box.currentTextChanged.connect(self.update_plaque)
             return combo_box
 
@@ -365,7 +224,7 @@ class QtCeb(QWidget):
         for i in range(6):
             cb = create_combobox(cb_model)
             layout.addWidget(cb)
-            self._plaques_inputs.append(cb)
+            self.plaques_inputs.append(cb)
 
         self.add_search_input(layout)
         self.tirageform_layout.addLayout(layout)
@@ -386,7 +245,7 @@ class QtCeb(QWidget):
         search_input.setMaximum(999)
         search_input.valueChanged.connect(self.update_search)
         layout.addWidget(search_input)
-        self._search_input = search_input
+        self.search_input = search_input
         return layout
 
     def add_solutions_table(self) -> Self:
@@ -400,15 +259,15 @@ class QtCeb(QWidget):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
-        self._solutions_table = QTableView()
-        self._data_model = CebTirageModel(self.tirage)
-        self._solutions_table.setModel(self._data_model)
-        self._solutions_table.setShowGrid(True)
-        self._solutions_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
-        self._solutions_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
-        self._solutions_table.selectionModel().currentRowChanged.connect(self.selection_changed)
-        self._solutions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        self.tirageform_layout.addWidget(self._solutions_table)
+        self.solutions_table = QTableView()
+        self.data_model = CebTirageModel(self.tirage)
+        self.solutions_table.setModel(self.data_model)
+        self.solutions_table.setShowGrid(True)
+        self.solutions_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
+        self.solutions_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.solutions_table.selectionModel().currentRowChanged.connect(self.selection_changed)
+        self.solutions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.tirageform_layout.addWidget(self.solutions_table)
         return self
 
     def add_result_layout(self) -> Self:
@@ -424,7 +283,7 @@ class QtCeb(QWidget):
                 label = QLabel("")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setStyleSheet("font-size: 14px; font-weight: bold;")
-                self._labels_results.append(label)
+                self.labels_results.append(label)
                 layout.addWidget(label, i, j)
         self.tirageform_layout.addLayout(layout)
         return self
@@ -436,7 +295,7 @@ class QtCeb(QWidget):
            Cette méthode parcourt tous les labels stockés dans l'attribut `_labels_results`
            et réinitialise leur texte à une chaîne vide.
            """
-        for label in self._labels_results:
+        for label in self.labels_results:
             label.clear()
 
     def set_result_layout(self, duree: int):
@@ -453,7 +312,7 @@ class QtCeb(QWidget):
         }.get(self.tirage.status, "black")
 
         results = [
-            f"{cebstatus_to_str(self.tirage.status)}",
+            f"{str(self.tirage.status)}",
             f"Trouvé(s): {self.tirage.str_found}",
             f"Ecart: {self.tirage.ecart}",
             f"Nombre de solutions: {self.tirage.count}",
@@ -461,8 +320,8 @@ class QtCeb(QWidget):
         ]
 
         for ix, result in enumerate(results):
-            self._labels_results[ix].setText(result)
-            self._labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
+            self.labels_results[ix].setText(result)
+            self.labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
 
     @Slot(QModelIndex, )
     def selection_changed(self, current: QModelIndex, _):
@@ -500,9 +359,9 @@ class QtCeb(QWidget):
         Enfin, elle réactive les signaux et appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
         """
         self.block_allsignals()
-        for index, combo in enumerate(self._plaques_inputs):
+        for index, combo in enumerate(self.plaques_inputs):
             combo.setCurrentText(str(self.tirage.plaques[index]))
-        self._search_input.setValue(self.tirage.search)
+        self.search_input.setValue(self.tirage.search)
         self.block_allsignals(False)
         self.clear()
 
@@ -526,7 +385,7 @@ class QtCeb(QWidget):
         stockées dans l'attribut `_plaques_inputs`.
         """
         self.clear()
-        self.tirage.plaques = [int(k.currentText()) for k in self._plaques_inputs]
+        self.tirage.plaques = [int(k.currentText()) for k in self.plaques_inputs]
         if self.tirage.status == CebStatus.Invalide:
             self.set_result_layout(0)
 
@@ -539,7 +398,7 @@ class QtCeb(QWidget):
         stockée dans l'attribut `_search_input`.
         """
         self.clear()
-        self.tirage.search = self._search_input.value()
+        self.tirage.search = self.search_input.value()
         if self.tirage.status == CebStatus.Invalide:
             self.set_result_layout(0)
 
@@ -551,14 +410,19 @@ class QtCeb(QWidget):
         Cette méthode appelle la méthode `clear` de l'objet `tirage` pour réinitialiser l'état du tirage.
         Elle met ensuite à jour le modèle de données et efface le texte des labels de résultats.
         """
-        # self.tirage.clear()
-        self._data_model.refresh()
+        self.data_model.refresh()
         self.clear_result_layout()
 
     @Slot()
     def load_data(self):
-        self.tirage.plaques = [int(k.currentText()) for k in self._plaques_inputs]
-        self.tirage.search = self._search_input.value()
+        """
+        Met à jour les plaques et la valeur de recherche du tirage avec les valeurs actuelles des entrées utilisateur.
+
+        Cette méthode lit les valeurs actuelles des QComboBox et du QSpinBox et les assigne aux attributs
+        `plaques` et `search` de l'objet `tirage`.
+        """
+        self.tirage.plaques = [int(k.currentText()) for k in self.plaques_inputs]
+        self.tirage.search = self.search_input.value()
 
     @Slot()
     def solve(self):
@@ -590,7 +454,7 @@ class QtCeb(QWidget):
 
             self.tirage.resolve()  # Appelle la méthode de résolution
             self.set_result_layout(timer.elapsed())
-            self._data_model.refresh()
+            self.data_model.refresh()
 
             if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
                 SolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()

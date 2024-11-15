@@ -61,6 +61,15 @@ class CebPlaque(CebBase):
         return self._value in PLAQUESUNIQUES
 
     def _set_value(self, valeur: int):
+        """
+        Met à jour la valeur de la plaque.
+
+        Args:
+            valeur (int): La nouvelle valeur de la plaque.
+
+        Raises:
+            ValueError: Si la nouvelle valeur est invalide.
+        """
         if valeur == self.value:
             return
         old = self.value

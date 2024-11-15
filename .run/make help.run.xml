@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="make help" type="PowerShellRunType" factoryName="PowerShell" scriptUrl="$PROJECT_DIR$/sphinx/make.ps1" scriptParameters="html" executablePath="C:\Program Files\PowerShell\7-preview\pwsh.exe">
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>

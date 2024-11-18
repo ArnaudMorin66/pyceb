@@ -11,12 +11,13 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                                QHBoxLayout, QComboBox, QSpinBox, QLayout, QTableView,
                                QHeaderView, QGridLayout, QLabel, QMenu,
                                QFileDialog, QSystemTrayIcon)
+from zerovm_sphinx_theme import theme_path
 
 from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus
 import qt.qceb_rcc # noqab F401
 from qt.dialog import SolutionDialog
 from qt.model import CebTirageModel
-from qt.theme import ThemeManager
+from qt.theme import ThemeManager, Theme
 
 
 class QCeb(QWidget):
@@ -41,6 +42,7 @@ class QCeb(QWidget):
 
     _tray_icon: QSystemTrayIcon #: Icône de la barre d'état.
 
+
     def __init__(self):
         """
         Initialise l'interface principale du jeu "Jeux du Compte est bon".
@@ -52,7 +54,7 @@ class QCeb(QWidget):
         self.tirage = CebTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
         self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
         self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
-        self.theme_manager = ThemeManager(self)  # Initialise le gestionnaire de thème.
+        self.theme_manager = ThemeManager(self, Theme.dark)  # Crée un gestionnaire de thème.
         self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
         self.add_inputs_layout() \
             .add_command_layout() \
@@ -75,7 +77,7 @@ class QCeb(QWidget):
         actions = [
             ("Résoudre", "Ctrl+R", self.solve, "solve.png"),
             ("Hasard", "Ctrl+H", self.random, "alea.png"),
-            ("Basculer Thème", "Ctrl+T", self.toggle_mode, "theme.png"),
+            ("Basculer Thème", "Ctrl+T", self.switch_theme, "theme.png"),
             ("Sauvegarder", "Ctrl+S", self.save_results_dialog, "save.png"),
             ("", "", None, ""),
             ("Quitter", "Ctrl+Q", self.close, "quitter.png"),
@@ -183,6 +185,7 @@ class QCeb(QWidget):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
+
         layout = QHBoxLayout()
 
         solve_button = QPushButton(QIcon(":/images/solve.png"), "Résoudre", self)
@@ -197,14 +200,31 @@ class QCeb(QWidget):
         save_button.clicked.connect(self.save_results_dialog)
         layout.addWidget(save_button)
 
-        toggle_button = QPushButton(QIcon(":/images/theme.png"), "Thème", self)
-        toggle_button.setCheckable(True)
-        toggle_button.setChecked(True)
-        toggle_button.clicked.connect(self.toggle_mode)
-        layout.addWidget(toggle_button)
+        theme_button = QPushButton(QIcon(":/images/theme.png"), "", self)
+        theme_button.name = "theme_button"
 
+        theme_button.setToolTip("Basculer le thème")
+        theme_button.setFixedWidth(40)
+        theme_button.setCheckable(True)
+        theme_button.setChecked(True)
+
+        theme_button.toggled.connect(self.switch_theme)
+        layout.addWidget(theme_button)
         self.tirageform_layout.addLayout(layout)
         return self
+
+    @Slot()
+    def switch_theme(self):
+        """
+        Switches the theme between light and dark.
+
+        This method toggles the theme between light and dark mode by setting the theme property
+        of the ThemeManager to the opposite of the current theme.
+
+        """
+        self.theme_manager.theme = Theme.light if self.theme_manager.theme == Theme.dark else Theme.dark
+
+
 
     def add_inputs_layout(self) -> Self:
         """
@@ -319,6 +339,7 @@ class QCeb(QWidget):
            """
         for label in self.labels_results:
             label.clear()
+        self.setWindowTitle("Jeux du Compte est bon")
 
     def set_result_layout(self, duree: int):
         """
@@ -336,7 +357,7 @@ class QCeb(QWidget):
         results = [
             f"{str(self.tirage.status)}",
             f"Trouvé(s): {self.tirage.str_found}",
-            f"Ecart: {self.tirage.ecart}",
+            f"{ f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche  else ''}",
             f"Nombre de solutions: {self.tirage.count}",
             f"Durée: {duree / 1000.0:.3f} s"
         ]
@@ -344,6 +365,7 @@ class QCeb(QWidget):
         for ix, result in enumerate(results):
             self.labels_results[ix].setText(result)
             self.labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
+        self.setWindowTitle( " - ".join(results) )
 
     @Slot(QModelIndex, )
     def selection_changed(self, current: QModelIndex, _):
@@ -478,15 +500,6 @@ class QCeb(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Erreur", str(e))
 
-    @Slot()
-    def toggle_mode(self):
-        """
-           Bascule le thème de l'application entre clair et sombre.
-
-           Cette méthode appelle la méthode `switch_theme` de l'objet `theme_manager`
-           pour changer le thème de l'application.
-           """
-        self.theme_manager.switch_theme()
 
     @Slot()
     def apropos(self):

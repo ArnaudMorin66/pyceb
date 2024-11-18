@@ -19,17 +19,17 @@ class ThemeManager:
     """
     _window: QWidget = None
 
-    def __init__(self, window):
+    def __init__(self, window, theme: Theme = Theme.dark):
         """
         Initialise le gestionnaire de thème avec le thème et la fenêtre spécifiés.
 
         :param window: La fenêtre QWidget à laquelle appliquer le thème.
         """
         self._window = window
-        self.init_theme()
+        self.theme = theme
 
     @property
-    def value(self):
+    def theme(self):
         global current_theme
         """
         Retourne le thème actuel.
@@ -38,8 +38,8 @@ class ThemeManager:
         """
         return current_theme
 
-    @value.setter
-    def value(self, theme: Theme):
+    @theme.setter
+    def theme(self, theme: Theme):
         """
         Définit le thème actuel.
 
@@ -73,7 +73,7 @@ class ThemeManager:
         Bascule entre les thèmes clair et sombre.
         """
         global current_theme
-        current_theme = Theme.light if self.value == Theme.dark else Theme.dark
+        current_theme = Theme.light if self.theme == Theme.dark else Theme.dark
         self.init_theme()
 
 
@@ -82,7 +82,7 @@ class ThemeManager:
         Applique le style du thème actuel à la fenêtre.
         """
         global current_theme
-        nom = "light" if self.value == Theme.light else "dark"
+        nom = "light" if self.theme == Theme.light else "dark"
         filename = f"{os.path.dirname(__file__)}{os.sep}theme{os.sep}{nom}style.qss"
         with open(filename, "r") as f:
             QApplication.instance().setStyleSheet(f.read())

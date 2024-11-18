@@ -5,4 +5,4 @@ Console
    :maxdepth: 4
    :caption: Contents:
 
-   main.rst
+   pyceb.rst

@@ -41,7 +41,7 @@ class CompteEstBon:
     def __init__(self):
         """
         Initialise les arguments de la ligne de commande et le tirage.
-        usage: main.py [-h] [-q | --qt | --no-qt] [-p PLAQUES [PLAQUES ...]] [-s SEARCH] [-j | --json | --no-json] [-w | --wait | --no-wait] [-S | --save | --no-save] [N ...]
+        usage: pyceb.py [-h] [-q | --qt | --no-qt] [-p PLAQUES [PLAQUES ...]] [-s SEARCH] [-j | --json | --no-json] [-w | --wait | --no-wait] [-S | --save | --no-save] [N ...]
 
         """
         self.args = None

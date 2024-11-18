@@ -12,12 +12,9 @@ import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
 from typing import List
+from ceb import (CebBase, CebOperation, CebPlaque, CebStatus, LISTEPLAQUES)
+from ceb.inotify import INotify
 
-from .base import CebBase
-from .inotify import INotify
-from .operation import CebOperation
-from .plaque import CebPlaque, LISTEPLAQUES
-from .status import CebStatus
 
 class CebTirage(INotify):
     """
@@ -72,6 +69,7 @@ class CebTirage(INotify):
     @property
     def found(self) -> list[int]:
         return sorted(set([k.value for k in self.solutions]))
+
     @property
     def str_found(self) -> str:
         return ", ".join(map(str, self.found))
@@ -421,14 +419,13 @@ if __name__ == "__main__":
     Cette section du code est exécutée lorsque le script est exécuté directement.
     Elle crée une instance de `CebTirage`, résout le problème et affiche les résultats.
     """
-    print("")
     t = CebTirage(auto=False)
     t.resolve()
     print(f"search: {t.search}")
     print("plaques : ")
     for p in t.plaques:
         print(f"\t{p.value}")
-    print("")
+
     match t.status:
         case CebStatus.CompteEstBon:
             print("Le Compte est bon")
@@ -439,7 +436,7 @@ if __name__ == "__main__":
             exit(1)
         case _:
             print("Tirage invalide")
-    print("")
+
     print(f"{t.count} solutions")
     for i, s in enumerate(t.solutions):
         print(f"\t{i}: \t{s}")

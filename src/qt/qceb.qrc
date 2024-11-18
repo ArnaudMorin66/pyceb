@@ -1,0 +1,11 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+    <file>images/alea.png</file>
+    <file>images/solve.png</file>
+    <file>images/ceb.png</file>
+    <file>images/apropos.png</file>
+    <file>images/quitter.png</file>
+    <file>images/save.png</file>
+    <file>images/theme.png</file>
+</qresource>
+</RCC>

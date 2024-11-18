@@ -94,10 +94,7 @@ class CebTirageModel(QAbstractTableModel):
             case Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
             case Qt.ItemDataRole.BackgroundRole:
-                return QColor({
-                                  CebStatus.CompteEstBon: Qt.GlobalColor.darkGreen,
-                                  CebStatus.CompteApproche: "saddlebrown"
-                              }.get(self._tirage.status, Qt.GlobalColor.black))
+                return QColor(Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor("saddlebrown"))
 
             case Qt.ItemDataRole.ForegroundRole:
                 return QColor(Qt.GlobalColor.white \

@@ -5,22 +5,21 @@ import subprocess
 import sys
 import time
 from typing import List, Self
-
 from PySide6.QtCore import Slot, Qt, QElapsedTimer, QModelIndex, QStringListModel
-from PySide6.QtGui import QKeyEvent, QIcon, QAction, QKeySequence
+from PySide6.QtGui import QKeyEvent, QIcon, QAction, QKeySequence, QCursor
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
                                QHBoxLayout, QComboBox, QSpinBox, QLayout, QTableView,
                                QHeaderView, QGridLayout, QLabel, QMenu,
-                               QFileDialog)
+                               QFileDialog, QSystemTrayIcon)
 
 from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus
-from qt import cebressources
+import qt.qceb_rcc # noqab F401
 from qt.dialog import SolutionDialog
 from qt.model import CebTirageModel
 from qt.theme import ThemeManager
 
 
-class QtCeb(QWidget):
+class QCeb(QWidget):
     """
     Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
     """
@@ -39,6 +38,8 @@ class QtCeb(QWidget):
     data_model: CebTirageModel #: Modèle de données pour le QTableView.
 
     context_menu: QMenu #: Menu contextuel pour les actions de l'application.
+
+    _tray_icon: QSystemTrayIcon #: Icône de la barre d'état.
 
     def __init__(self):
         """
@@ -68,13 +69,13 @@ class QtCeb(QWidget):
         This method creates a QMenu and populates it with QAction items, each associated with a
         specific method and keyboard shortcut. Icons are also set for each action.
         """
-        self.context_menu = QMenu(self)
+        self.context_menu = QMenu()
 
         #:  List of actions with their names, shortcuts, methods, and icons
         actions = [
-            ("Résoudre", "Ctrl+R", self.solve, "calculer.png"),
+            ("Résoudre", "Ctrl+R", self.solve, "solve.png"),
             ("Hasard", "Ctrl+H", self.random, "alea.png"),
-            ("Basculer Thème", "Ctrl+T", self.toggle_mode, "yin-yang.png"),
+            ("Basculer Thème", "Ctrl+T", self.toggle_mode, "theme.png"),
             ("Sauvegarder", "Ctrl+S", self.save_results_dialog, "save.png"),
             ("", "", None, ""),
             ("Quitter", "Ctrl+Q", self.close, "quitter.png"),
@@ -93,6 +94,28 @@ class QtCeb(QWidget):
             action.triggered.connect(method)
             self.context_menu.addAction(action)
 
+        self._tray_icon = QSystemTrayIcon(self)
+        self._tray_icon.setContextMenu(self.context_menu)
+        self._tray_icon.setToolTip("Jeux du Compte est bon")
+
+        self._tray_icon.activated.connect(self.tray_activate)
+
+        self._tray_icon.setIcon(QIcon(":/images/apropos.png"))
+        self._tray_icon.show()
+
+    @Slot(QSystemTrayIcon.ActivationReason)
+    def tray_activate(self, reason):
+        """
+        Gère l'activation de l'icône de la barre d'état système.
+
+        Cette méthode affiche le menu contextuel lorsque l'icône de la barre d'état système est activée.
+
+        Args:
+            reason (QSystemTrayIcon.ActivationReason): La raison de l'activation.
+        """
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            self.context_menu.popup(QCursor.pos())
+
     def contextMenuEvent(self, event):
         """
         Gère l'événement de menu contextuel pour afficher un menu contextuel personnalisé.
@@ -100,7 +123,6 @@ class QtCeb(QWidget):
         Args:
             event (QContextMenuEvent): L'événement de menu contextuel.
         """
-
         self.context_menu.exec(event.globalPos())
 
     def save_results_dialog(self):
@@ -163,7 +185,7 @@ class QtCeb(QWidget):
         """
         layout = QHBoxLayout()
 
-        solve_button = QPushButton(QIcon(":/images/calculer.png"), "Résoudre", self)
+        solve_button = QPushButton(QIcon(":/images/solve.png"), "Résoudre", self)
         solve_button.clicked.connect(self.solve)
         layout.addWidget(solve_button)
 
@@ -175,7 +197,7 @@ class QtCeb(QWidget):
         save_button.clicked.connect(self.save_results_dialog)
         layout.addWidget(save_button)
 
-        toggle_button = QPushButton(QIcon(":/images/yin-yang.png"), "Thème", self)
+        toggle_button = QPushButton(QIcon(":/images/theme.png"), "Thème", self)
         toggle_button.setCheckable(True)
         toggle_button.setChecked(True)
         toggle_button.clicked.connect(self.toggle_mode)
@@ -278,13 +300,13 @@ class QtCeb(QWidget):
             Self: L'instance actuelle de `CebMainTirage`.
         """
         layout = QGridLayout()
-        for i in range(2):
-            for j in range(3):
+        for ligne in range(2):
+            for colonne in range(3):
                 label = QLabel("")
                 label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                 label.setStyleSheet("font-size: 14px; font-weight: bold;")
                 self.labels_results.append(label)
-                layout.addWidget(label, i, j)
+                layout.addWidget(label, ligne, colonne)
         self.tirageform_layout.addLayout(layout)
         return self
 
@@ -403,7 +425,7 @@ class QtCeb(QWidget):
             self.set_result_layout(0)
 
     @Slot()
-    def clear(self):
+    def clear(self) -> None:
         """
         Réinitialise l'état du tirage et met à jour l'interface utilisateur.
 
@@ -413,16 +435,6 @@ class QtCeb(QWidget):
         self.data_model.refresh()
         self.clear_result_layout()
 
-    @Slot()
-    def load_data(self):
-        """
-        Met à jour les plaques et la valeur de recherche du tirage avec les valeurs actuelles des entrées utilisateur.
-
-        Cette méthode lit les valeurs actuelles des QComboBox et du QSpinBox et les assigne aux attributs
-        `plaques` et `search` de l'objet `tirage`.
-        """
-        self.tirage.plaques = [int(k.currentText()) for k in self.plaques_inputs]
-        self.tirage.search = self.search_input.value()
 
     @Slot()
     def solve(self):
@@ -449,12 +461,15 @@ class QtCeb(QWidget):
                 return
 
         try:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+
             timer = QElapsedTimer()
             timer.start()
 
             self.tirage.resolve()  # Appelle la méthode de résolution
             self.set_result_layout(timer.elapsed())
             self.data_model.refresh()
+            QApplication.restoreOverrideCursor()
 
             if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
                 SolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
@@ -485,8 +500,9 @@ class QtCeb(QWidget):
                           QApplication.applicationName() + " v" + QApplication.applicationVersion() + "\n" + "Auteur: " + QApplication.organizationName() + "\n" + "Date: " + time.strftime(
                               "%d/%m/%Y %H:%M:%S"))
 
+
     @staticmethod
-    def run():
+    def exec():
         """
         Initialise et exécute l'application principale.
 
@@ -500,12 +516,9 @@ class QtCeb(QWidget):
         app.setApplicationName("Jeux du Compte est bon")
         app.setApplicationVersion("1.0")
         app.setOrganizationName("© Arnaud Morin")
-        cebressources.qInitResources()
         app.setWindowIcon(QIcon(":/images/apropos.png"))
-        mainwindow = QtCeb()
-        mainwindow.show()
-        app.exec()
-        sys.exit(0)
+        QCeb().show()
+        sys.exit(app.exec())
 
 if __name__ == "__main__":
-    QtCeb.run()
+    QCeb.exec()

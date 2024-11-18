@@ -16,7 +16,7 @@ from rich.console import Console
 from rich.table import Table
 
 from ceb import CebTirage, CebStatus
-from qt.qtceb import QtCeb
+from qt.qceb import QCeb
 def exec_time(fun: Callable, *vals: object) -> tuple[int, any]:
     """
     Mesure le temps d'exécution d'une fonction.
@@ -66,7 +66,7 @@ class CompteEstBon:
                                  default=None)
         self.args = self.parser.parse_args()
         if self.args.qt:
-            QtCeb.run()
+            QCeb.exec()
             sys.exit(0)
 
     def configure_tirage(self):

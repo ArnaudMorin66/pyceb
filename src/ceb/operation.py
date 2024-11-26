@@ -14,7 +14,7 @@ class CebOperation(CebBase):
         _value (int): La valeur résultante de l'opération.
         _operations (list): Liste des opérations effectuées.
     """
-    """Class represente une opération"""
+
     def __init__(self, g: CebBase, op: str, d: CebBase):
         """ 
         Initialise une nouvelle instance de CebOperation.
@@ -23,6 +23,12 @@ class CebOperation(CebBase):
             g (CebBase): Le premier opérande.
             op (str): L'opération à effectuer.
             d (CebBase): Le second opérande.
+        e.g.:
+            CebOperation(CebPlaque(5), "+", CebPlaque(3))
+        remark:
+            Les opérandes sont inversés si le premier opérande est inférieur au second
+
+            la valeur de l'opération est définie à 0 si le résultat est inutilisable
         """
         super().__init__()
         if g.value < d.value:
@@ -46,7 +52,7 @@ class CebOperation(CebBase):
                 self._value = 0
         if self._value != 0:
             """
-            Met à jour la liste des opérations si la valeur résultante n'est pas zéro.
+            Met à jour la liste des opérations si la valeur résultante n'est pas nulle.
             """
             self._operations.clear()
             if isinstance(g, CebOperation):

@@ -1,8 +1,8 @@
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtWidgets import QDialog, QGridLayout, QListWidget, QListWidgetItem
+from PySide6.QtWidgets import QDialog, QGridLayout, QListWidget
 
 
-class SolutionDialog(QDialog):
+class QSolutionDialog(QDialog):
     """
     Classe de boîte de dialogue pour afficher les solutions d'un tirage.
 
@@ -25,12 +25,11 @@ class SolutionDialog(QDialog):
         layout = QGridLayout()
         list_widget = QListWidget(self)
         list_widget.setAlternatingRowColors(True)
-        list_widget.setItemAlignment(Qt.AlignmentFlag.AlignHCenter)
-        for operation in solution.operations:
-            item = QListWidgetItem(operation)
+        list_widget.addItems(solution.operations)
+        for index in range(list_widget.count()):
+            item = list_widget.item(index)
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-            list_widget.addItem(item)
-        list_widget.mousePressEvent = self.mousePressEvent
+        list_widget.mousePressEvent = lambda event: self.accept()
         layout.addWidget(list_widget)
         self.setLayout(layout)
         #: Ajouter un timer pour fermer la boîte de dialogue après 5 secondes

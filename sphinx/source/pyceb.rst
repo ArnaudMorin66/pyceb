@@ -1,4 +1,0 @@
-pyceb
-=====
-
-.. automodule:: pyceb

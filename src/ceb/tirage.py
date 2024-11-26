@@ -15,6 +15,12 @@ from typing import List
 from ceb import (CebBase, CebOperation, CebPlaque, CebStatus, LISTEPLAQUES)
 from ceb.inotify import INotify
 
+EXTENSION_METHODS = {
+    ".json": "save_to_json",
+    ".xml": "save_to_xml",
+    ".pkl": "save_to_pickle",
+    ".csv": "save_to_csv"
+}
 
 class CebTirage(INotify):
     """
@@ -22,17 +28,14 @@ class CebTirage(INotify):
     """
 
     def __init__(
-            self, plaques: List[int] = (), search: int = 0, auto: bool = False
-    ) -> None:
+            self, plaques: List[int] = (), search: int = 0) -> None:
         """
             Initialise une instance de CebTirage.
 
             :param plaques: Liste d'entiers représentant les plaques.
             :param search: Valeur entière à rechercher.
-            :param auto: Booléen indiquant si la recherche doit être automatique.
             """
         super().__init__()
-        self.auto: bool = auto
         self._plaques: List[CebPlaque] = []
         self._search: int = 0
         self._solutions: List[CebBase] = []
@@ -55,15 +58,13 @@ class CebTirage(INotify):
         Réinitialise l'état de l'objet CebTirage.
 
         Cette méthode vide la liste des solutions, réinitialise la différence maximale,
-        valide l'état actuel et, si l'option auto est activée, lance la résolution.
+        valide l'état actuel.
 
         :return: Le statut actuel de l'objet CebTirage.
         """
         self._solutions = []
         self._diff = maxsize
         self.valid()
-        if self.auto:
-            self.resolve()
         return self.status
 
     @property
@@ -200,7 +201,7 @@ class CebTirage(INotify):
         elif sol not in self._solutions:
             self._solutions.append(sol)
 
-    def resolve(
+    def solve(
             self, plaques: List[int | CebPlaque] = (), search: int = 0
     ) -> CebStatus:
         """
@@ -214,36 +215,34 @@ class CebTirage(INotify):
             self._search = search
             self.plaques = plaques
 
-        if not self.auto:
-            self.clear()
         if self._status == CebStatus.Invalide:
             return self._status
 
         self._status = CebStatus.EnCours
-        self.resolve_stack(self.plaques[:])
+        self.solve_stack(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
         self.status = CebStatus.CompteEstBon \
             if self._solutions[0].value == self._search else CebStatus.CompteApproche
         return self._status
 
-    async def resolve_async(self) -> CebStatus:
+    async def solve_async(self) -> CebStatus:
         """
         Résout le problème de manière asynchrone.
 
-        Cette méthode utilise `asyncio.to_thread` pour exécuter la méthode `resolve` dans un thread séparé.
+        Cette méthode utilise `asyncio.to_thread` pour exécuter la méthode solve` dans un thread séparé.
 
         :return: Le statut actuel de l'objet CebTirage après résolution.
         """
-        return await asyncio.to_thread(self.resolve)
+        return await asyncio.to_thread(self.solve)
 
-    def resolve_stack(self, plaques: List) -> None:
+    def solve_stack(self, plaques: List[CebBase]) -> None:
         """
         Résout le problème en utilisant une pile pour explorer toutes les combinaisons possibles de plaques et d'opérations.
 
         :param plaques: Liste de plaques à utiliser pour la résolution.
         """
 
-        def next_list(current_list: List, ceb_operation: CebOperation, ii: int, jj: int) -> List:
+        def next_list(current_list: List[CebBase], ceb_operation: CebOperation, ii: int, jj: int) -> List[CebBase]:
             """
             Génère une nouvelle liste en appliquant une opération sur deux plaques et en excluant les plaques utilisées.
 
@@ -256,13 +255,14 @@ class CebTirage(INotify):
             return [ceb_operation] + [x for k, x in enumerate(current_list) if k not in (ii, jj)]
 
         stack = [plaques]
+        operations = ["x", "+", "-", "/"]
         while stack:
             current_liste = stack.pop()
             for ix, plq in enumerate(current_liste):
                 self._add_solution(plq)
                 for jx in range(ix + 1, len(current_liste)):
                     q = current_liste[jx]
-                    for operation in "x+-/":
+                    for operation in operations:
                         oper: CebOperation = CebOperation(plq, operation, q)
                         if oper.value:
                             stack.append(next_list(current_liste, oper, ix, jx))
@@ -299,21 +299,7 @@ class CebTirage(INotify):
         """
         return self.json
 
-    @staticmethod
-    def solve(
-            plaques: List[int] = (), search: int = 0, auto: bool = False
-    ) -> CebTirage:
-        """
-        Crée une instance de CebTirage et résout le problème.
 
-        :param plaques: Liste d'entiers représentant les plaques.
-        :param search: Valeur entière à rechercher.
-        :param auto: Booléen indiquant si la recherche doit être automatique.
-        :return: Une instance de CebTirage après résolution.
-        """
-        _tirage = CebTirage(plaques, search, auto)
-        _tirage.resolve()
-        return _tirage
 
     def save_to_json(self, filename: str):
         """
@@ -354,6 +340,12 @@ class CebTirage(INotify):
         tree.write(filename, encoding="utf-8", xml_declaration=True)
 
     def save_to_pickle(self, filename: str):
+        """
+        Sauvegarde les résultats du tirage dans un fichier pickle.
+
+        Args:
+            filename (str): Le nom du fichier dans lequel sauvegarder les résultats.
+        """
         with open(filename, "wb") as file:
             # noinspection PyTypeChecker
             pickle.dump(self.result, file)
@@ -381,36 +373,37 @@ class CebTirage(INotify):
     def save(self, filename: str):
         """
         Sauvegarde les résultats du tirage dans un fichier.
-
         Args:
             filename (str): Le nom du fichier dans lequel sauvegarder les résultats..
         """
-        _, extension = os.path.splitext(filename)
-        save_methods = {
-            ".json": self.save_to_json,
-            ".xml": self.save_to_xml,
-            ".pkl": self.save_to_pickle,
-            ".csv": self.save_to_csv
-        }
-        method = save_methods.get(extension, self.save_to_json)
+        method = self.get_save_method(filename)
         # noinspection PyArgumentList
         method(filename)
 
+    def get_save_method(self, filename: str):
+        """
+        Retourne la méthode de sauvegarde appropriée en fonction de l'extension du fichier.
+        Args:
+            filename (str): Le nom du fichier.
+        Returns:
+            method: La méthode de sauvegarde.
+        """
+        _, extension = os.path.splitext(filename)
+        method_name = EXTENSION_METHODS.get(extension, "save_to_json")
+        return getattr(self, method_name)
 
-
-
-
-def resolve(plaques: List[int] = (), search: int = 0, auto: bool = False) -> CebTirage:
+def solve(
+        plaques: List[int] = (), search: int = 0) -> CebTirage:
     """
-    Résout le problème en créant une instance de CebTirage et en appelant sa méthode solve.
+    Crée une instance de CebTirage et résout le problème.
 
     :param plaques: Liste d'entiers représentant les plaques.
     :param search: Valeur entière à rechercher.
-    :param auto: Booléen indiquant si la recherche doit être automatique.
     :return: Une instance de CebTirage après résolution.
     """
-    return CebTirage.solve(plaques, search, auto)
-
+    _tirage = CebTirage(plaques, search)
+    _tirage.solve()
+    return _tirage
 
 if __name__ == "__main__":
     """
@@ -419,8 +412,8 @@ if __name__ == "__main__":
     Cette section du code est exécutée lorsque le script est exécuté directement.
     Elle crée une instance de `CebTirage`, résout le problème et affiche les résultats.
     """
-    t = CebTirage(auto=False)
-    t.resolve()
+    t = CebTirage()
+    t.solve()
     print(f"search: {t.search}")
     print("plaques : ")
     for p in t.plaques:

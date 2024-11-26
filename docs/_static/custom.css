@@ -1,0 +1,15 @@
+body {
+    background-color: #1e1e1e; /* Dark background */
+    color: #d4d4d4; /* Light text */
+}
+
+/* Style other elements as needed */
+a {
+    color: #0687f0;
+}
+
+.wy-nav-side {
+    background-color: #252525;
+}
+
+/* ...more styles... */

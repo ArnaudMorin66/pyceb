@@ -2,12 +2,11 @@
 Importation
 """
 from __future__ import annotations
-
 from typing import List
-
 from .base import CebBase
 from .inotify import INotify
 
+#: Liste des plaques disponibles
 LISTEPLAQUES: List[int] = [
     1,
     2,
@@ -36,8 +35,12 @@ LISTEPLAQUES: List[int] = [
     100
 ]
 
+#: Liste des plaques uniques, triées
 PLAQUESUNIQUES = sorted(set(LISTEPLAQUES))
+
+#: Liste des plaques uniques sous forme de chaînes de caractères
 STRPLAQUESUNIQUES = [str(x) for x in PLAQUESUNIQUES]
+
 
 class CebPlaque(CebBase):
     """
@@ -60,7 +63,8 @@ class CebPlaque(CebBase):
         """
         return self._value in PLAQUESUNIQUES
 
-    def _set_value(self, valeur: int):
+
+    def set_value(self, valeur: int):
         """
         Met à jour la valeur de la plaque.
 
@@ -73,7 +77,7 @@ class CebPlaque(CebBase):
         if valeur == self.value:
             return
         old = self.value
-        super()._set_value(valeur)
+        super().set_value(valeur)
         self.operations[0] = str(valeur)
         if self._observer:
             self._observer.notify(self, old)

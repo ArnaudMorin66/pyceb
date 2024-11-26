@@ -1,0 +1,4 @@
+pyceb - Console
+===============
+
+.. automodule:: pyceb

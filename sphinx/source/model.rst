@@ -1,4 +1,0 @@
-CebTirageModel
-==============
-
-.. automodule:: qt.model

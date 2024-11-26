@@ -4,7 +4,7 @@ from PySide6.QtGui import QColor
 from ceb import CebTirage, CebStatus
 
 
-class CebTirageModel(QAbstractTableModel):
+class QCebTirageModel(QAbstractTableModel):
     """
     Modèle de données pour afficher les solutions du tirage dans un QTableView.
 
@@ -69,7 +69,8 @@ class CebTirageModel(QAbstractTableModel):
             case Qt.ItemDataRole.BackgroundRole:
                 if index.row() % 2 == 1:
                     return QColor(
-                        Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor("saddlebrown"))
+                        Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor(
+                            "saddlebrown"))
             case Qt.ItemDataRole.ForegroundRole:
                 if index.row() % 2 == 1:
                     return QColor(Qt.GlobalColor.white)
@@ -94,7 +95,8 @@ class CebTirageModel(QAbstractTableModel):
             case Qt.ItemDataRole.TextAlignmentRole:
                 return Qt.AlignmentFlag.AlignCenter
             case Qt.ItemDataRole.BackgroundRole:
-                return QColor(Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor("saddlebrown"))
+                return QColor(Qt.GlobalColor.darkGreen if self._tirage.status == CebStatus.CompteEstBon else QColor(
+                    "saddlebrown"))
 
             case Qt.ItemDataRole.ForegroundRole:
                 return QColor(Qt.GlobalColor.white \
@@ -102,9 +104,3 @@ class CebTirageModel(QAbstractTableModel):
                                   else Qt.GlobalColor.white)
 
         return None
-
-    def refresh(self):
-        """
-        Rafraîchit le modèle de données en émettant un signal de réinitialisation.
-        """
-        self.modelReset.emit()

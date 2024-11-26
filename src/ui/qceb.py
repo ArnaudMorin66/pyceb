@@ -5,43 +5,64 @@ import subprocess
 import sys
 import time
 from typing import List, Self
-from PySide6.QtCore import Slot, Qt, QElapsedTimer, QModelIndex, QStringListModel
-from PySide6.QtGui import QKeyEvent, QIcon, QAction, QKeySequence, QCursor
+
+from PySide6.QtCore import Slot, Qt, QElapsedTimer, QModelIndex
+from PySide6.QtGui import QIcon, QAction, QKeySequence, QCursor
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
-                               QHBoxLayout, QComboBox, QSpinBox, QLayout, QTableView,
-                               QHeaderView, QGridLayout, QLabel, QMenu,
+                               QHBoxLayout, QComboBox, QSpinBox, QLayout,
+                               QGridLayout, QLabel, QMenu,
                                QFileDialog, QSystemTrayIcon)
-from zerovm_sphinx_theme import theme_path
 
+import ui.qceb_rcc  # noqab F401
 from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus
-import qt.qceb_rcc # noqab F401
-from qt.dialog import SolutionDialog
-from qt.model import CebTirageModel
-from qt.theme import ThemeManager, Theme
+from ui.dialog import QSolutionDialog
+from ui.solutionview import QSolutionsView
+from ui.theme import QThemeManager, Theme
+from util.utilitaires import singleton
 
 
+@singleton
 class QCeb(QWidget):
     """
     Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
     """
-
+    # _instance = None  #: Instance unique de QCeb.
 
     tirage: CebTirage  #:  Instance de CebTirage pour gérer le tirage actuel.
 
-    plaques_inputs: List[QComboBox] = [] #: Liste des QComboBox pour les plaques.
+    plaques_inputs: List[QComboBox] = []  #: Liste des QComboBox pour les plaques.
 
-    labels_results: List[QLabel] = []   #: Liste des QLabel pour afficher les résultats.
+    labels_results: List[QLabel] = []  #: Liste des QLabel pour afficher les résultats.
 
-    search_input: QSpinBox #: QSpinBox pour la valeur de recherche.
+    search_input: QSpinBox  #: QSpinBox pour la valeur de recherche.
 
-    solutions_table: QTableView #: QTableView pour afficher les solutions.
+    solutions_table: QSolutionsView  #: QTableView pour afficher les solutions.
 
-    data_model: CebTirageModel #: Modèle de données pour le QTableView.
+    context_menu: QMenu  #: Menu contextuel pour les actions de l'application.
 
-    context_menu: QMenu #: Menu contextuel pour les actions de l'application.
+    _tray_icon: QSystemTrayIcon  #: Icône de la barre d'état.
 
-    _tray_icon: QSystemTrayIcon #: Icône de la barre d'état.
-
+    # noinspection PyUnresolvedReferences
+    # def __new__(cls, *args, **kwargs):
+    #
+    #     """Méthode spéciale pour créer une instance unique de la classe QCeb (singleton).
+    #
+    #     Cette méthode surcharge la méthode __new__ pour implémenter le patron de conception Singleton.
+    #     Elle vérifie si une instance de la classe existe déjà. Si ce n'est pas le cas, elle crée une nouvelle instance
+    #     à l'aide de la méthode __new__ de la superclasse et la stocke dans l'attribut de classe _instance.
+    #     Dans tous les cas, elle retourne l'instance unique stockée dans _instance.
+    #
+    #     Args:
+    #         klass: La classe pour laquelle une nouvelle instance doit être créée.
+    #         *args: Arguments positionnels passés à la méthode __new__ de la superclasse.
+    #         **kwargs: Arguments nommés passés à la méthode __new__ de la superclasse.
+    #
+    #     Returns:
+    #         L'instance unique de la classe QCeb.
+    #     """
+    #     if cls._instance is None:
+    #         cls._instance = super(QCeb, cls).__new__(cls, *args, **kwargs)
+    #     return cls._instance
 
     def __init__(self):
         """
@@ -54,15 +75,18 @@ class QCeb(QWidget):
         self.tirage = CebTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
         self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
         self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
-        self.theme_manager = ThemeManager(self, Theme.dark)  # Crée un gestionnaire de thème.
+
         self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
-        self.add_inputs_layout() \
-            .add_command_layout() \
-            .add_result_layout() \
-            .add_solutions_table()  # Ajoute les différents layouts à la fenêtre principale.
+        self.add_inputs_layout()
+        self.add_command_layout()
+        self.add_result_layout()
+        self.add_solutions_table()
         self.setLayout(self.tirageform_layout)  # Définit le layout principal de la fenêtre.
         self.update_inputs()  # Met à jour les entrées de l'interface utilisateur avec les valeurs actuelles du tirage.
         self.set_context_menu()  # Configure le menu contextuel de l'application.
+
+    def __call__(self):
+        self.show()
 
     def set_context_menu(self):
         """
@@ -90,20 +114,22 @@ class QCeb(QWidget):
             if name == "":
                 self.context_menu.addSeparator()
                 continue
-            action = QAction(name, self)
+            action = QAction(name, QApplication.instance())
             action.setIcon(QIcon(f":/images/{icon}"))
             action.setShortcut(QKeySequence(shortcut))
+            action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
             action.triggered.connect(method)
             self.context_menu.addAction(action)
+            self.addAction(action)
 
-        self._tray_icon = QSystemTrayIcon(self)
-        self._tray_icon.setContextMenu(self.context_menu)
-        self._tray_icon.setToolTip("Jeux du Compte est bon")
+        tray_icon = QSystemTrayIcon(self)
+        tray_icon.setContextMenu(self.context_menu)
+        tray_icon.setToolTip("Jeux du Compte est bon")
 
-        self._tray_icon.activated.connect(self.tray_activate)
+        tray_icon.activated.connect(self.tray_activate)
 
-        self._tray_icon.setIcon(QIcon(":/images/apropos.png"))
-        self._tray_icon.show()
+        tray_icon.setIcon(QIcon(":/images/apropos.png"))
+        tray_icon.show()
 
     @Slot(QSystemTrayIcon.ActivationReason)
     def tray_activate(self, reason):
@@ -116,7 +142,7 @@ class QCeb(QWidget):
             reason (QSystemTrayIcon.ActivationReason): La raison de l'activation.
         """
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
-            self.context_menu.popup(QCursor.pos())
+            self.context_menu.exec(QCursor.pos())
 
     def contextMenuEvent(self, event):
         """
@@ -147,37 +173,6 @@ class QCeb(QWidget):
             except Exception as e:
                 print(f"Erreur lors de l'ouverture du fichier : {e}")
 
-    def keyPressEvent(self, event: QKeyEvent):
-        """
-        Gère les événements de pression de touche pour le widget.
-
-        Cette méthode remplace le gestionnaire d'événements de pression de touche par défaut
-        pour fournir un comportement personnalisé pour des combinaisons de touches spécifiques
-        lorsque le statut du tirage n'est pas `EnCours`.
-
-        Args:
-            event (QKeyEvent): L'événement de pression de touche à gérer.
-        """
-        if self.tirage.status == CebStatus.EnCours:
-            return
-        if event.modifiers() == Qt.KeyboardModifier.ControlModifier:
-            if event.key() == Qt.Key.Key_R:
-                self.solve()
-            elif event.key() == Qt.Key.Key_H:
-                self.random()
-            elif event.key() == Qt.Key.Key_C:
-                self.clear()
-            elif event.key() == Qt.Key.Key_A:
-                self.apropos()
-            elif event.key() == Qt.Key.Key_S:
-                self.save_results_dialog()
-            elif event.key() == Qt.Key.Key_Q:
-                self.close()
-            else:
-                super().keyPressEvent(event)
-        else:
-            super().keyPressEvent(event)
-
     def add_command_layout(self) -> Self:
         """
         Ajoute un layout de commandes avec des boutons pour résoudre, générer un tirage aléatoire et basculer le thème.
@@ -201,30 +196,15 @@ class QCeb(QWidget):
         layout.addWidget(save_button)
 
         theme_button = QPushButton(QIcon(":/images/theme.png"), "", self)
-        theme_button.name = "theme_button"
-
         theme_button.setToolTip("Basculer le thème")
         theme_button.setFixedWidth(40)
         theme_button.setCheckable(True)
         theme_button.setChecked(True)
-
         theme_button.toggled.connect(self.switch_theme)
         layout.addWidget(theme_button)
+
         self.tirageform_layout.addLayout(layout)
         return self
-
-    @Slot()
-    def switch_theme(self):
-        """
-        Switches the theme between light and dark.
-
-        This method toggles the theme between light and dark mode by setting the theme property
-        of the ThemeManager to the opposite of the current theme.
-
-        """
-        self.theme_manager.theme = Theme.light if self.theme_manager.theme == Theme.dark else Theme.dark
-
-
 
     def add_inputs_layout(self) -> Self:
         """
@@ -233,40 +213,17 @@ class QCeb(QWidget):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
-
-        def combobox_model():
-            """
-            Crée un modèle de données pour les QComboBox.
-
-            Returns:
-                QStringListModel: Le modèle de données pour les QComboBox.
-            """
-            model = QStringListModel()
-            model.setStringList(STRPLAQUESUNIQUES)
-            return model
-
-        def create_combobox(model) -> QComboBox:
-            """
-            Crée une QComboBox pour une plaque spécifique et la configure avec le modèle donné.
-
-            Args:
-                model (QStringListModel): Le modèle de données pour la QComboBox.
-
-         Returns:
-                QLayout: Le layout mis à jour avec la QComboBox ajoutée.
-            """
-            combo_box = QComboBox()
-            combo_box.setModel(model)
-            combo_box.setEditable(True)
-            combo_box.currentTextChanged.connect(self.update_plaque)
-            return combo_box
-
-        cb_model = combobox_model()
         layout = QHBoxLayout()
-        for i in range(6):
-            cb = create_combobox(cb_model)
-            layout.addWidget(cb)
-            self.plaques_inputs.append(cb)
+
+        for index in range(6):
+            combo_box = QComboBox()
+            combo_box.setDuplicatesEnabled(False)
+            combo_box.addItems(STRPLAQUESUNIQUES)
+            combo_box.setEditable(True)
+            combo_box.setProperty("plaque", index)
+            combo_box.currentTextChanged.connect(self.update_plaque)
+            layout.addWidget(combo_box)
+            self.plaques_inputs.append(combo_box)
 
         self.add_search_input(layout)
         self.tirageform_layout.addLayout(layout)
@@ -301,14 +258,8 @@ class QCeb(QWidget):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
-        self.solutions_table = QTableView()
-        self.data_model = CebTirageModel(self.tirage)
-        self.solutions_table.setModel(self.data_model)
-        self.solutions_table.setShowGrid(True)
-        self.solutions_table.setSelectionMode(QTableView.SelectionMode.SingleSelection)
-        self.solutions_table.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
+        self.solutions_table = QSolutionsView(self.tirage)
         self.solutions_table.selectionModel().currentRowChanged.connect(self.selection_changed)
-        self.solutions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.tirageform_layout.addWidget(self.solutions_table)
         return self
 
@@ -353,34 +304,33 @@ class QCeb(QWidget):
             CebStatus.CompteApproche: "saddlebrown",
             CebStatus.Invalide: "red"
         }.get(self.tirage.status, "black")
-
-        results = [
-            f"{str(self.tirage.status)}",
-            f"Trouvé(s): {self.tirage.str_found}",
-            f"{ f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche  else ''}",
-            f"Nombre de solutions: {self.tirage.count}",
-            f"Durée: {duree / 1000.0:.3f} s"
-        ]
+        results = [f"{str(self.tirage.status)}"]
+        if self.tirage.status != CebStatus.Invalide:
+            results += [
+                f"Trouvé(s): {self.tirage.str_found}",
+                f"{f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche else ''}",
+                f"Nombre de solutions: {self.tirage.count}",
+                f"Durée: {duree / 1000.0:.3f} s"
+            ]
 
         for ix, result in enumerate(results):
             self.labels_results[ix].setText(result)
             self.labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
-        self.setWindowTitle( " - ".join(results) )
+        self.setWindowTitle(" - ".join(results))
 
     @Slot(QModelIndex, )
     def selection_changed(self, current: QModelIndex, _):
         """
-        Slot appelé lorsque la sélection de ligne change dans le QTableView.
-
-        Cette méthode affiche une boîte de dialogue avec les détails de la solution
-        correspondant à la ligne actuellement sélectionnée.
+        Handles the selection change in a model view, triggered by a left mouse click with no keyboard modifiers. Opens a 
+        QSolutionDialog for the selected solution in the tirage.
 
         Args:
-            current (QModelIndex): L'index de la ligne actuellement sélectionnée.
-            _ (QModelIndex): L'index de la ligne précédemment sélectionnée.
+            current (QModelIndex): The currently selected model index.
+            _ (any): Unused placeholder parameter.
         """
-        if QApplication.mouseButtons() == Qt.MouseButton.LeftButton:
-            SolutionDialog(self.tirage.solutions[current.row()], self.tirage.status).exec()
+        if (QApplication.mouseButtons() == Qt.MouseButton.LeftButton and
+                (QApplication.keyboardModifiers() == Qt.KeyboardModifier.NoModifier)):
+            QSolutionDialog(self.tirage.solutions[current.row()], self.tirage.status).exec()
 
     @Slot()
     def random(self):
@@ -402,34 +352,40 @@ class QCeb(QWidget):
         redondantes, puis met à jour les QComboBox et le QSpinBox avec les valeurs actuelles du tirage.
         Enfin, elle réactive les signaux et appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
         """
-        self.block_allsignals()
-        for index, combo in enumerate(self.plaques_inputs):
-            combo.setCurrentText(str(self.tirage.plaques[index]))
+
+        def block_allsignals(value: bool = True):
+            """
+            Bloque ou débloque les signaux de tous les widgets d'entrée.
+
+            Args:
+                value (bool): Si True, bloque les signaux. Si False, débloque les signaux.
+            """
+            for widget in self.plaques_inputs + [self.search_input]:
+                widget.blockSignals(value)
+
+        block_allsignals()
+        for combo in self.plaques_inputs:
+            index = combo.property("plaque")
+            combo.setCurrentText(str(self.tirage.plaques[index].value))
         self.search_input.setValue(self.tirage.search)
-        self.block_allsignals(False)
+        block_allsignals(False)
         self.clear()
-
-    @staticmethod
-    def block_allsignals(value: bool = True):
-        """
-        Bloque ou débloque les signaux de tous les widgets de l'application.
-
-        Args:
-            value (bool): Si True, bloque les signaux. Si False, débloque les signaux.
-        """
-        for widget in QApplication.allWidgets():
-            widget.blockSignals(value)
 
     @Slot()
     def update_plaque(self):
         """
-        Met à jour les plaques du tirage avec les valeurs actuelles des QComboBox.
+        Met à jour la valeur d'une plaque spécifique en fonction de l'entrée utilisateur.
 
-        Cette méthode met à jour les plaques du tirage avec les valeurs actuelles des QComboBox
-        stockées dans l'attribut `_plaques_inputs`.
+        Cette méthode est appelée lorsque le texte actuel d'une QComboBox change.
+        Elle met à jour la valeur de la plaque correspondante dans l'objet `tirage`,
+        réinitialise l'interface utilisateur et met à jour le layout des résultats si le statut du tirage est `Invalide`.
         """
         self.clear()
-        self.tirage.plaques = [int(k.currentText()) for k in self.plaques_inputs]
+        # noinspection PyUnresolvedReferences
+        txt = self.sender().currentText()
+        index = self.sender().property("plaque")
+        self.tirage.plaques[index].value = int(txt) if txt.isnumeric() else 0
+
         if self.tirage.status == CebStatus.Invalide:
             self.set_result_layout(0)
 
@@ -454,9 +410,9 @@ class QCeb(QWidget):
         Cette méthode appelle la méthode `clear` de l'objet `tirage` pour réinitialiser l'état du tirage.
         Elle met ensuite à jour le modèle de données et efface le texte des labels de résultats.
         """
-        self.data_model.refresh()
+        # noinspection PyUnresolvedReferences
+        self.solutions_table.refresh()
         self.clear_result_layout()
-
 
     @Slot()
     def solve(self):
@@ -484,22 +440,18 @@ class QCeb(QWidget):
 
         try:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-
             timer = QElapsedTimer()
             timer.start()
-
-            self.tirage.resolve()  # Appelle la méthode de résolution
+            self.tirage.solve()  # Appelle la méthode de résolution
             self.set_result_layout(timer.elapsed())
-            self.data_model.refresh()
+            # noinspection PyUnresolvedReferences
+            self.solutions_table.refresh()
             QApplication.restoreOverrideCursor()
-
+            self.solutions_table.setFocus()
             if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-                SolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
-
-
+                QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
         except Exception as e:
             QMessageBox.critical(self, "Erreur", str(e))
-
 
     @Slot()
     def apropos(self):
@@ -513,25 +465,36 @@ class QCeb(QWidget):
                           QApplication.applicationName() + " v" + QApplication.applicationVersion() + "\n" + "Auteur: " + QApplication.organizationName() + "\n" + "Date: " + time.strftime(
                               "%d/%m/%Y %H:%M:%S"))
 
-
-    @staticmethod
-    def exec():
+    @Slot()
+    def switch_theme(self):
         """
-        Initialise et exécute l'application principale.
-
-        Cette fonction configure les paramètres régionaux, crée l'application principale,
-        initialise les ressources, configure l'icône de la fenêtre, et affiche la fenêtre principale.
-        Elle exécute ensuite la boucle d'événements de l'application.
+        Bascule entre les thèmes clair et sombre.
         """
-        locale.setlocale(locale.LC_NUMERIC, 'fr_FR.UTF-8')
-        # Crée et exécute l'application principale
-        app = QApplication(sys.argv)
-        app.setApplicationName("Jeux du Compte est bon")
-        app.setApplicationVersion("1.0")
-        app.setOrganizationName("© Arnaud Morin")
-        app.setWindowIcon(QIcon(":/images/apropos.png"))
-        QCeb().show()
-        sys.exit(app.exec())
+        QThemeManager().switch_theme()
+
+
+def qceb_exec():
+    """
+       Initialise et exécute l'application principale.
+
+       Cette fonction configure les paramètres régionaux, crée l'application principale,
+
+       initialise les ressources, configure l'icône de la fenêtre, et affiche la fenêtre principale.
+
+       Elle exécute ensuite la boucle d'événements de l'application.
+   """
+    locale.setlocale(locale.LC_NUMERIC, 'fr_FR.UTF-8')
+    # Crée et exécute l'application principale
+    app = QApplication(sys.argv)
+    app.setApplicationName("Jeux du Compte est bon")
+    app.setApplicationVersion("1.1")
+    app.setOrganizationName("© Arnaud Morin")
+    app.setWindowIcon(QIcon(":/images/apropos.png"))
+    QThemeManager().theme = Theme.dark
+    window = QCeb()
+    window()
+    sys.exit(app.exec())
+
 
 if __name__ == "__main__":
-    QCeb.exec()
+    qceb_exec()

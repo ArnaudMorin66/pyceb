@@ -34,6 +34,8 @@ class CebStatus(Enum):
             str: Une chaîne de caractères représentant l'état du compte.
         """
         return {
+            CebStatus.Indefini: "Indéfini",
+            CebStatus.Valide: "✔️ Valide",
             CebStatus.EnCours: "⚙️ En cours",
             CebStatus.CompteEstBon: "😀 Compte est bon",
             CebStatus.CompteApproche: "🙄 Compte approché",

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from typing import List
 
+
 class CebBase:
     """
     Classe de base pour les objets CebBase, représentant une plaque ou une opération.
@@ -28,7 +29,7 @@ class CebBase:
         """
         return self._value
 
-    def _set_value(self, valeur: int):
+    def set_value(self, valeur: int):
         """
         Définit la valeur de l'objet.
 
@@ -43,7 +44,7 @@ class CebBase:
 
         :param valeur: La nouvelle valeur à définir.
         """
-        self._set_value(valeur)
+        self.set_value(valeur)
 
     @property
     def rank(self) -> int:
@@ -82,7 +83,7 @@ class CebBase:
         return self._operations == other.operations
 
     @property
-    def op1(self)-> str:
+    def op1(self) -> str:
         """
         Retourne la première opération si elle existe, sinon une chaîne vide.
 
@@ -91,7 +92,7 @@ class CebBase:
         return self._operations[0] if len(self._operations) > 0 else ""
 
     @property
-    def op2(self)-> str:
+    def op2(self) -> str:
         """
         Retourne la deuxième opération si elle existe, sinon une chaîne vide.
 
@@ -100,7 +101,7 @@ class CebBase:
         return self._operations[1] if len(self._operations) > 1 else ""
 
     @property
-    def op3(self)-> str:
+    def op3(self) -> str:
         """
         Retourne la troisième opération si elle existe, sinon une chaîne vide.
 
@@ -109,7 +110,7 @@ class CebBase:
         return self._operations[2] if len(self._operations) > 2 else ""
 
     @property
-    def op4(self)-> str:
+    def op4(self) -> str:
         """
         Retourne la quatrième opération si elle existe, sinon une chaîne vide.
 
@@ -118,11 +119,10 @@ class CebBase:
         return self._operations[3] if len(self._operations) > 3 else ""
 
     @property
-    def op5(self)-> str:
+    def op5(self) -> str:
         """
         Retourne la cinquième opération si elle existe, sinon une chaîne vide.
 
         :return: str
         """
-        return self._operations[4] if len(self._operations) >4 else ""
-
+        return self._operations[4] if len(self._operations) > 4 else ""

@@ -1,0 +1,4 @@
+Utilitaires
+===========
+
+.. automodule:: util.utilitaires

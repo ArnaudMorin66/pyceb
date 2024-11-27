@@ -25,7 +25,8 @@ def singleton(class_):
         :return: L'instance unique de la classe.
         """
         if class_ not in instances:
-            instances[class_] = class_(*args, **kwargs)
+            kl = class_(*args, **kwargs)
+            instances[class_] = kl
         return instances[class_]
 
     return get_instance
@@ -104,3 +105,12 @@ def ellapsed_exec(func: Callable) -> Callable:
         return time.process_time_ns() - start_time, result
 
     return wrapper
+
+
+class MetaSingleton(type):
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            cls._instances[cls] = super(MetaSingleton, cls).__call__(*args, **kwargs)
+        return cls._instances[cls]

@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
 from PySide6.QtWidgets import QTableView, QHeaderView
 
-from ceb import CebTirage
+from ceb.tirage import CebTirage
 from ui.dialog import QSolutionDialog
 from ui.model import QCebTirageModel
 
@@ -29,6 +29,13 @@ class QSolutionsView(QTableView):
         self.setSelectionMode(QTableView.SelectionMode.SingleSelection)
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+
+    def __call__(self):
+        """
+        Update the QSolutionsView with a new CebTirage.
+
+    """
+        self.model().layoutChanged.emit()
 
     def refresh(self):
         """

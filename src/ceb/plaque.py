@@ -4,7 +4,7 @@ Importation
 from __future__ import annotations
 from typing import List
 from .base import CebBase
-from .inotify import INotify
+from .notify import IPlaqueNotify
 
 #: Liste des plaques disponibles
 LISTEPLAQUES: List[int] = [
@@ -46,14 +46,13 @@ class CebPlaque(CebBase):
     """
         classe définissant une plaque du jeu 
     """
-    _observer: INotify = None
+    _observers: List[IPlaqueNotify] = []
 
-    def __init__(self, v: int = 0, obs: INotify = None):
+    def __init__(self, v: int = 0, obs: IPlaqueNotify = None):
         super().__init__()
-        self._observer = obs
         self._value = v
-        if not self.is_valid:
-            raise ValueError(f"Valeur {v} invalide")
+        if obs:
+            self._observers = [obs]
         self.operations.append(str(v))
 
     @property
@@ -79,5 +78,34 @@ class CebPlaque(CebBase):
         old = self.value
         super().set_value(valeur)
         self.operations[0] = str(valeur)
-        if self._observer:
-            self._observer.notify(self, old)
+        self.notify_observers(old)
+
+    def notify_observers(self, old: int):
+        """
+        Notifie les observateurs de la modification de la plaque.
+
+        Args:
+            old (int): L'ancienne valeur de la plaque.
+        """
+        for obs in self._observers:
+            obs.plaque_notify(self, old)
+
+    def add_observer(self, observer: IPlaqueNotify):
+        """
+        Ajoute un observateur à la liste.
+
+        Args:
+            observer (IPlaqueNotify): L'observateur à ajouter.
+        """
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def remove_observer(self, observer: IPlaqueNotify):
+        """
+        Retire un observateur de la liste.
+
+        Args:
+            observer (IPlaqueNotify): L'observateur à retirer.
+        """
+        if observer in self._observers:
+            self._observers.remove(observer)

@@ -12,8 +12,12 @@ import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
 from typing import List
-from ceb import (CebBase, CebOperation, CebPlaque, CebStatus, LISTEPLAQUES)
-from ceb.inotify import INotify
+
+from ceb.base import CebBase
+from ceb.notify import IPlaqueNotify, ISearchNotify
+from ceb.operation import CebOperation
+from ceb.plaque import CebPlaque, LISTEPLAQUES
+from ceb.status import CebStatus
 
 EXTENSION_METHODS = {
     ".json": "save_to_json",
@@ -22,10 +26,11 @@ EXTENSION_METHODS = {
     ".csv": "save_to_csv"
 }
 
-class CebTirage(INotify):
+class CebTirage(IPlaqueNotify):
     """
     Tirage Plaques et Recherche
     """
+    _search_observers: List[ISearchNotify] = []
 
     def __init__(
             self, plaques: List[int] = (), search: int = 0) -> None:
@@ -37,12 +42,14 @@ class CebTirage(INotify):
             """
         super().__init__()
         self._plaques: List[CebPlaque] = []
+
         self._search: int = 0
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
         self._status: CebStatus = CebStatus.Indefini
-        for k in plaques:
-            self._plaques.append(CebPlaque(k, self))
+
+        for _ in range(6):
+            self._plaques.append(CebPlaque(0, self))
 
         self._search = search
         if search and plaques:
@@ -52,6 +59,55 @@ class CebTirage(INotify):
             self.clear()
         else:
             self.random()
+
+    def remove_observers_plaques(self):
+        for plaque in self._plaques:
+            plaque.remove_observer(self)
+
+    def add_observers_plaques(self):
+        for plaque in self._plaques:
+            plaque.add_observer(self)
+
+    def add_search_observer(self, obs: ISearchNotify):
+        """
+        Ajoute un observateur de recherche.
+
+        Args:
+            obs (ISearchNotify): L'observateur à ajouter.
+        """
+        if obs not in self._search_observers:
+            self._search_observers.append(obs)
+
+    def remove_search_observer(self, obs: ISearchNotify):
+        """
+        Retire un observateur de recherche.
+
+        Args:
+            obs (ISearchNotify): L'observateur à retirer.
+        """
+        if obs in self._search_observers:
+            self._search_observers.remove(obs)
+
+    def _notify_search_observers(self, old: int):
+        """
+        Notifie les observateurs de la modification de la plaque.
+
+        Args:
+            old (int): L'ancienne valeur de la plaque.
+        """
+        for obs in self._search_observers:
+            obs.search_notify(self.search, old)
+
+    def __call__(self):
+        """
+        ExampleSolver is a class designed to provide solutions
+        to example problems by implementing a specific solve method.
+
+        Attributes:
+            problem (str): The problem description that needs solving.
+            solution (str): The solution after the problem has been processed.
+        """
+        return self.solve()
 
     def clear(self) -> CebStatus:
         """
@@ -85,7 +141,8 @@ class CebTirage(INotify):
             return
         old = self._search
         self._search = value
-        self.notify(old, value)
+        self.clear()
+        self._notify_search_observers(old)
 
     def random(self) -> CebStatus:
         """
@@ -96,11 +153,14 @@ class CebTirage(INotify):
 
         :return: Le statut actuel de l'objet CebTirage après réinitialisation.
         """
-        self._search = randint(100, 999)
+        self.remove_observers_plaques()
+        self.search = randint(100, 999)
         liste_plaques = LISTEPLAQUES[:]
-        self._plaques[:] = []
-        self._plaques = \
-            [CebPlaque(liste_plaques.pop(randint(0, len(liste_plaques) - 1)), self) for _ in range(6)]
+        for plaque in self._plaques:
+            index =randint(0, len(liste_plaques) - 1)
+            plaque.value = liste_plaques[index]
+            liste_plaques.pop(index)
+        self.add_observers_plaques()
         return self.clear()
 
     @property
@@ -164,7 +224,7 @@ class CebTirage(INotify):
                     break
         return self._status
 
-    def notify(self, param1, param2):
+    def plaque_notify(self, param1, param2):
         """
         Notifie un changement de paramètre et réinitialise l'état de l'objet CebTirage.
 

@@ -10,7 +10,9 @@ import keyboard
 from rich.console import Console
 from rich.table import Table
 
-from ceb import CebTirage, CebStatus
+from ceb.status import CebStatus
+from ceb.tirage import CebTirage
+# from ceb import CebTirage, CebStatus
 from ui.qceb import qceb_exec
 from util.utilitaires import parse_args, ellapsed_exec
 
@@ -75,7 +77,7 @@ class QCompteEstBon:
         Any
             Returns the result of the method it decorates.
         """
-        return self.tirage.solve()
+        return self.tirage()
 
     def display_tirage(self):
         """

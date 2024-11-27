@@ -14,12 +14,13 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                                QFileDialog, QSystemTrayIcon)
 
 import ui.qceb_rcc  # noqab F401
-from ceb import CebTirage, STRPLAQUESUNIQUES, CebStatus
+from ceb.status import CebStatus
+from ceb.tirage import CebTirage
+from ui.components import QComboboxPlq, QSpinBoxSearch
 from ui.dialog import QSolutionDialog
 from ui.solutionview import QSolutionsView
 from ui.theme import QThemeManager, Theme
 from util.utilitaires import singleton
-
 
 @singleton
 class QCeb(QWidget):
@@ -82,7 +83,7 @@ class QCeb(QWidget):
         self.add_result_layout()
         self.add_solutions_table()
         self.setLayout(self.tirageform_layout)  # Définit le layout principal de la fenêtre.
-        self.update_inputs()  # Met à jour les entrées de l'interface utilisateur avec les valeurs actuelles du tirage.
+        # self.update_inputs()  # Met à jour les entrées de l'interface utilisateur avec les valeurs actuelles du tirage.
         self.set_context_menu()  # Configure le menu contextuel de l'application.
 
     def __call__(self):
@@ -99,28 +100,34 @@ class QCeb(QWidget):
 
         #:  List of actions with their names, shortcuts, methods, and icons
         actions = [
-            ("Résoudre", "Ctrl+R", self.solve, "solve.png"),
-            ("Hasard", "Ctrl+H", self.random, "alea.png"),
-            ("Basculer Thème", "Ctrl+T", self.switch_theme, "theme.png"),
-            ("Sauvegarder", "Ctrl+S", self.save_results_dialog, "save.png"),
-            ("", "", None, ""),
-            ("Quitter", "Ctrl+Q", self.close, "quitter.png"),
-            ("", "", None, ""),
-            ("A propos", "Ctrl+A", self.apropos, "apropos.png")
+            ("Résoudre", "Ctrl+R", self.solve, "solve.png", False),
+            ("Hasard", "Ctrl+H", self.random, "alea.png", False),
+            ("Thème", "Ctrl+T", self.switch_theme, "theme.png", True),
+            ("Sauvegarder", "Ctrl+S", self.save_results_dialog, "save.png", False),
+            ("", "", None, "", False),
+            ("Quitter", "Ctrl+Q", self.close, "quitter.png", False),
+            ("", "", None, "", False),
+            ("A propos", "Ctrl+A", self.apropos, "apropos.png", False)
         ]
 
         #: Iterate through the actions and add them to the context menu
-        for name, shortcut, method, icon in actions:
+        for name, shortcut, method, icon, check in actions:
             if name == "":
                 self.context_menu.addSeparator()
                 continue
-            action = QAction(name, QApplication.instance())
+            action = QAction(name, self)
             action.setIcon(QIcon(f":/images/{icon}"))
-            action.setShortcut(QKeySequence(shortcut))
-            action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
-            action.triggered.connect(method)
+            if shortcut:
+                action.setShortcut(QKeySequence(shortcut))
+                action.setShortcutContext(Qt.ShortcutContext.ApplicationShortcut)
+                self.addAction(action)
+            if check:
+                action.setCheckable(True)
+                action.setChecked(True)
+                action.toggled.connect(method)
+            else:
+                action.triggered.connect(method)
             self.context_menu.addAction(action)
-            self.addAction(action)
 
         tray_icon = QSystemTrayIcon(self)
         tray_icon.setContextMenu(self.context_menu)
@@ -157,6 +164,8 @@ class QCeb(QWidget):
         """
         Ouvre une boîte de dialogue de sauvegarde pour enregistrer les résultats en JSON.
         """
+        if self.tirage.status not in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
+            return
 
         filename, _ = QFileDialog.getSaveFileName(self, "Sauvegarder les résultats", "",
                                                   "JSON Files (*.json);;XML Files (*.xml);; Pickle Files (*.pkl);; CSV Files (*.csv)",
@@ -208,19 +217,23 @@ class QCeb(QWidget):
 
     def add_inputs_layout(self) -> Self:
         """
-        Ajoute un layout horizontal contenant des QComboBox pour les plaques et un QSpinBox pour la recherche.
+        Adds input fields layout for plaque selection.
+
+        This method creates a horizontal box layout and populates it with six
+        QComboBox widgets. Each combo box is configured to handle plaque selections
+        with unique strings from a predefined list. The combo boxes are made editable
+        and connected to the update_plaque method to handle changes in the text.
+        Additionally, the created combo boxes are stored in a list attribute for
+        further access. The search input field is added to the layout before integrating
+        the complete layout into tirage form layout.
 
         Returns:
-            Self: L'instance actuelle de `CebMainTirage`.
+            Self: The instance of the current object.
         """
         layout = QHBoxLayout()
 
-        for index in range(6):
-            combo_box = QComboBox()
-            combo_box.setDuplicatesEnabled(False)
-            combo_box.addItems(STRPLAQUESUNIQUES)
-            combo_box.setEditable(True)
-            combo_box.setProperty("plaque", index)
+        for plq in self.tirage.plaques:
+            combo_box = QComboboxPlq(plq)
             combo_box.currentTextChanged.connect(self.update_plaque)
             layout.addWidget(combo_box)
             self.plaques_inputs.append(combo_box)
@@ -239,9 +252,7 @@ class QCeb(QWidget):
         Returns:
             QLayout: Le layout mis à jour avec le QSpinBox ajouté.
         """
-        search_input = QSpinBox()
-        search_input.setMinimum(100)
-        search_input.setMaximum(999)
+        search_input = QSpinBoxSearch(self.tirage)
         search_input.valueChanged.connect(self.update_search)
         layout.addWidget(search_input)
         self.search_input = search_input
@@ -342,7 +353,8 @@ class QCeb(QWidget):
         générées. Enfin, elle appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
         """
         self.tirage.random()
-        self.update_inputs()
+        # self.update_inputs()
+        self.clear()
 
     def update_inputs(self):
         """
@@ -353,24 +365,25 @@ class QCeb(QWidget):
         Enfin, elle réactive les signaux et appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
         """
 
-        def block_allsignals(value: bool = True):
-            """
-            Bloque ou débloque les signaux de tous les widgets d'entrée.
+        # def block_allsignals(value: bool = True):
+        #     """
+        #     Bloque ou débloque les signaux de tous les widgets d'entrée.
+        #
+        #     Args:
+        #         value (bool): Si True, bloque les signaux. Si False, débloque les signaux.
+        #     """
+        #     for widget in self.plaques_inputs + [self.search_input]:
+        #         widget.blockSignals(value)
 
-            Args:
-                value (bool): Si True, bloque les signaux. Si False, débloque les signaux.
-            """
-            for widget in self.plaques_inputs + [self.search_input]:
-                widget.blockSignals(value)
-
-        block_allsignals()
-        for combo in self.plaques_inputs:
-            index = combo.property("plaque")
-            combo.setCurrentText(str(self.tirage.plaques[index].value))
-        self.search_input.setValue(self.tirage.search)
-        block_allsignals(False)
+        # block_allsignals(True)
+        # for combo in self.plaques_inputs:
+        #     # noinspection PyUnresolvedReferences
+        #     combo.setCurrentText(str(combo.plaque.value))
+        # # self.search_input.setValue(self.tirage.search)
+        # block_allsignals(False)
         self.clear()
 
+    # noinspection PyUnresolvedReferences
     @Slot()
     def update_plaque(self):
         """
@@ -381,11 +394,6 @@ class QCeb(QWidget):
         réinitialise l'interface utilisateur et met à jour le layout des résultats si le statut du tirage est `Invalide`.
         """
         self.clear()
-        # noinspection PyUnresolvedReferences
-        txt = self.sender().currentText()
-        index = self.sender().property("plaque")
-        self.tirage.plaques[index].value = int(txt) if txt.isnumeric() else 0
-
         if self.tirage.status == CebStatus.Invalide:
             self.set_result_layout(0)
 
@@ -398,7 +406,7 @@ class QCeb(QWidget):
         stockée dans l'attribut `_search_input`.
         """
         self.clear()
-        self.tirage.search = self.search_input.value()
+        # self.tirage.search = self.search_input.value()
         if self.tirage.status == CebStatus.Invalide:
             self.set_result_layout(0)
 
@@ -411,7 +419,7 @@ class QCeb(QWidget):
         Elle met ensuite à jour le modèle de données et efface le texte des labels de résultats.
         """
         # noinspection PyUnresolvedReferences
-        self.solutions_table.refresh()
+        self.solutions_table()
         self.clear_result_layout()
 
     @Slot()
@@ -442,10 +450,10 @@ class QCeb(QWidget):
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             timer = QElapsedTimer()
             timer.start()
-            self.tirage.solve()  # Appelle la méthode de résolution
+            self.tirage()  # Appelle la méthode de résolution
             self.set_result_layout(timer.elapsed())
             # noinspection PyUnresolvedReferences
-            self.solutions_table.refresh()
+            self.solutions_table()
             QApplication.restoreOverrideCursor()
             self.solutions_table.setFocus()
             if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:

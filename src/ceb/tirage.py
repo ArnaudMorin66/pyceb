@@ -14,10 +14,11 @@ from sys import maxsize
 from typing import List
 
 from ceb.base import CebBase
-from ceb.notify import IPlaqueNotify, ISearchNotify
+from ceb.notify import IPlaqueNotify
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.status import CebStatus
+from utils import ObservableObject
 
 EXTENSION_METHODS = {
     ".json": "save_to_json",
@@ -26,11 +27,11 @@ EXTENSION_METHODS = {
     ".csv": "save_to_csv"
 }
 
+
 class CebTirage(IPlaqueNotify):
     """
     Tirage Plaques et Recherche
     """
-    _search_observers: List[ISearchNotify] = []
 
     def __init__(
             self, plaques: List[int] = (), search: int = 0) -> None:
@@ -43,7 +44,7 @@ class CebTirage(IPlaqueNotify):
         super().__init__()
         self._plaques: List[CebPlaque] = []
 
-        self._search: int = 0
+        self._search: ObservableObject[int] = ObservableObject(0)
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
         self._status: CebStatus = CebStatus.Indefini
@@ -51,61 +52,54 @@ class CebTirage(IPlaqueNotify):
         for _ in range(6):
             self._plaques.append(CebPlaque(0, self))
 
-        self._search = search
+        self._search.value = search
         if search and plaques:
             self.clear()
         elif search == 0 and len(plaques) > 0:
-            self._search = randint(100, 999)
+            self._search.value = randint(100, 999)
             self.clear()
         else:
             self.random()
 
-    def remove_observers_plaques(self):
+    def connect_search(self, observer):
+        """
+        Attache un observateur à l'objet de recherche.
+
+        :param observer: L'observateur à attacher.
+        """
+        self._search.connect(observer)
+
+    def disconnect_search(self, observer):
+        """
+        Détache un observateur de l'objet de recherche.
+
+        :param observer: L'observateur à détacher.
+        """
+        self._search.disconnect(observer)
+
+    def connect_plaques(self, plaque_notify: IPlaqueNotify):
+        """
+        Attache un observateur à toutes les plaques.
+
+        :param plaque_notify: L'observateur à attacher.
+        """
         for plaque in self._plaques:
-            plaque.remove_observer(self)
+            plaque.connect(plaque_notify)
 
-    def add_observers_plaques(self):
+    def disconnect_plaques(self, notify_plaque: IPlaqueNotify):
+        """
+        Détache un observateur de toutes les plaques.
+
+        :param notify_plaque: L'observateur à détacher.
+        """
         for plaque in self._plaques:
-            plaque.add_observer(self)
-
-    def add_search_observer(self, obs: ISearchNotify):
-        """
-        Ajoute un observateur de recherche.
-
-        Args:
-            obs (ISearchNotify): L'observateur à ajouter.
-        """
-        if obs not in self._search_observers:
-            self._search_observers.append(obs)
-
-    def remove_search_observer(self, obs: ISearchNotify):
-        """
-        Retire un observateur de recherche.
-
-        Args:
-            obs (ISearchNotify): L'observateur à retirer.
-        """
-        if obs in self._search_observers:
-            self._search_observers.remove(obs)
-
-    def _notify_search_observers(self, old: int):
-        """
-        Notifie les observateurs de la modification de la plaque.
-
-        Args:
-            old (int): L'ancienne valeur de la plaque.
-        """
-        for obs in self._search_observers:
-            obs.search_notify(self.search, old)
+            plaque.disconnect(notify_plaque)
 
     def __call__(self):
         """
-        ExampleSolver is a class designed to provide solutions
-        to example problems by implementing a specific solve method.
+        Appelle la méthode `solve` pour résoudre le problème.
 
-        Attributes:
-            problem (str): The problem description that needs solving.
-            solution (str): The solution after the problem has been processed.
+        :return: Le statut actuel de l'objet CebTirage après résolution.
         """
         return self.solve()
 
@@ -133,16 +127,14 @@ class CebTirage(IPlaqueNotify):
 
     @property
     def search(self) -> int:
-        return self._search
+        return self._search.value
 
     @search.setter
     def search(self, value: int):
-        if value == self._search:
+        if value == self._search.value:
             return
-        old = self._search
-        self._search = value
+        self._search.value = value
         self.clear()
-        self._notify_search_observers(old)
 
     def random(self) -> CebStatus:
         """
@@ -153,14 +145,14 @@ class CebTirage(IPlaqueNotify):
 
         :return: Le statut actuel de l'objet CebTirage après réinitialisation.
         """
-        self.remove_observers_plaques()
+        self.disconnect_plaques(self)
         self.search = randint(100, 999)
         liste_plaques = LISTEPLAQUES[:]
         for plaque in self._plaques:
-            index =randint(0, len(liste_plaques) - 1)
+            index = randint(0, len(liste_plaques) - 1)
             plaque.value = liste_plaques[index]
             liste_plaques.pop(index)
-        self.add_observers_plaques()
+        self.connect_plaques(self)
         return self.clear()
 
     @property
@@ -215,7 +207,7 @@ class CebTirage(IPlaqueNotify):
 
         :return: Le statut actuel de l'objet CebTirage, soit `CebStatus.Valide` soit `CebStatus.Invalide`.
         """
-        self._status = CebStatus.Valide if 100 <= self._search <= 999 and len(
+        self._status = CebStatus.Valide if 100 <= self._search.value <= 999 and len(
             self._plaques) == 6 else CebStatus.Invalide
         if self._status == CebStatus.Valide:
             for plaque in self._plaques:
@@ -224,14 +216,14 @@ class CebTirage(IPlaqueNotify):
                     break
         return self._status
 
-    def plaque_notify(self, param1, param2):
+    def plaque_notify(self, sender, old):
         """
         Notifie un changement de paramètre et réinitialise l'état de l'objet CebTirage.
 
         Cette méthode appelle la méthode `clear` pour réinitialiser l'état de l'objet.
 
-        :param param1: Ancienne valeur du paramètre.
-        :param param2: Nouvelle valeur du paramètre.
+        :param sender: Ancienne valeur du paramètre.
+        :param old: Nouvelle valeur du paramètre.
         """
         self.clear()
 
@@ -252,7 +244,7 @@ class CebTirage(IPlaqueNotify):
         :param sol: L'opération à ajouter aux solutions.
         :return: Rien.
         """
-        diff: int = abs(sol.value - self._search)
+        diff: int = abs(sol.value - self._search.value)
         if diff > self._diff:
             return
         if diff != self._diff:
@@ -272,7 +264,7 @@ class CebTirage(IPlaqueNotify):
         :return: Le statut actuel de l'objet CebTirage.
         """
         if search and len(plaques) == 6:
-            self._search = search
+            self._search.value = search
             self.plaques = plaques
 
         if self._status == CebStatus.Invalide:
@@ -282,7 +274,7 @@ class CebTirage(IPlaqueNotify):
         self.solve_stack(self.plaques[:])
         self._solutions.sort(key=lambda sol: sol.rank)
         self.status = CebStatus.CompteEstBon \
-            if self._solutions[0].value == self._search else CebStatus.CompteApproche
+            if self._solutions[0].value == self.search else CebStatus.CompteApproche
         return self._status
 
     async def solve_async(self) -> CebStatus:
@@ -358,8 +350,6 @@ class CebTirage(IPlaqueNotify):
         :return: Une chaîne JSON représentant l'objet CebTirage.
         """
         return self.json
-
-
 
     def save_to_json(self, filename: str):
         """
@@ -452,6 +442,7 @@ class CebTirage(IPlaqueNotify):
         method_name = EXTENSION_METHODS.get(extension, "save_to_json")
         return getattr(self, method_name)
 
+
 def solve(
         plaques: List[int] = (), search: int = 0) -> CebTirage:
     """
@@ -464,6 +455,7 @@ def solve(
     _tirage = CebTirage(plaques, search)
     _tirage.solve()
     return _tirage
+
 
 if __name__ == "__main__":
     """

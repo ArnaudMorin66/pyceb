@@ -13,14 +13,14 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                                QGridLayout, QLabel, QMenu,
                                QFileDialog, QSystemTrayIcon)
 
-import ui.qceb_rcc  # noqab F401
-from ceb.status import CebStatus
-from ceb.tirage import CebTirage
-from ui.components import QComboboxPlq, QSpinBoxSearch
-from ui.dialog import QSolutionDialog
-from ui.solutionview import QSolutionsView
-from ui.theme import QThemeManager, Theme
-from util.utilitaires import singleton
+import ui.qceb_rcc  # noqa: F401
+from ceb import CebStatus, CebTirage
+from ui import QComboboxPlq, QSpinBoxSearch
+from ui import QSolutionDialog
+from ui import QSolutionsView
+from ui import QThemeManager, Theme
+from utils import singleton
+
 
 @singleton
 class QCeb(QWidget):
@@ -83,7 +83,6 @@ class QCeb(QWidget):
         self.add_result_layout()
         self.add_solutions_table()
         self.setLayout(self.tirageform_layout)  # Définit le layout principal de la fenêtre.
-        # self.update_inputs()  # Met à jour les entrées de l'interface utilisateur avec les valeurs actuelles du tirage.
         self.set_context_menu()  # Configure le menu contextuel de l'application.
 
     def __call__(self):
@@ -234,7 +233,7 @@ class QCeb(QWidget):
 
         for plq in self.tirage.plaques:
             combo_box = QComboboxPlq(plq)
-            combo_box.currentTextChanged.connect(self.update_plaque)
+            combo_box.currentTextChanged.connect(self.update_data)
             layout.addWidget(combo_box)
             self.plaques_inputs.append(combo_box)
 
@@ -253,7 +252,7 @@ class QCeb(QWidget):
             QLayout: Le layout mis à jour avec le QSpinBox ajouté.
         """
         search_input = QSpinBoxSearch(self.tirage)
-        search_input.valueChanged.connect(self.update_search)
+        search_input.valueChanged.connect(self.update_data)
         layout.addWidget(search_input)
         self.search_input = search_input
         return layout
@@ -353,39 +352,11 @@ class QCeb(QWidget):
         générées. Enfin, elle appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
         """
         self.tirage.random()
-        # self.update_inputs()
-        self.clear()
-
-    def update_inputs(self):
-        """
-        Met à jour les entrées de l'interface utilisateur avec les valeurs actuelles du tirage.
-
-        Cette méthode bloque temporairement les signaux de tous les widgets pour éviter des mises à jour
-        redondantes, puis met à jour les QComboBox et le QSpinBox avec les valeurs actuelles du tirage.
-        Enfin, elle réactive les signaux et appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
-        """
-
-        # def block_allsignals(value: bool = True):
-        #     """
-        #     Bloque ou débloque les signaux de tous les widgets d'entrée.
-        #
-        #     Args:
-        #         value (bool): Si True, bloque les signaux. Si False, débloque les signaux.
-        #     """
-        #     for widget in self.plaques_inputs + [self.search_input]:
-        #         widget.blockSignals(value)
-
-        # block_allsignals(True)
-        # for combo in self.plaques_inputs:
-        #     # noinspection PyUnresolvedReferences
-        #     combo.setCurrentText(str(combo.plaque.value))
-        # # self.search_input.setValue(self.tirage.search)
-        # block_allsignals(False)
         self.clear()
 
     # noinspection PyUnresolvedReferences
     @Slot()
-    def update_plaque(self):
+    def update_data(self):
         """
         Met à jour la valeur d'une plaque spécifique en fonction de l'entrée utilisateur.
 
@@ -394,19 +365,6 @@ class QCeb(QWidget):
         réinitialise l'interface utilisateur et met à jour le layout des résultats si le statut du tirage est `Invalide`.
         """
         self.clear()
-        if self.tirage.status == CebStatus.Invalide:
-            self.set_result_layout(0)
-
-    @Slot()
-    def update_search(self):
-        """
-        Met à jour la valeur de recherche du tirage avec la valeur actuelle du QSpinBox.
-
-        Cette méthode met à jour la valeur de recherche du tirage avec la valeur actuelle du QSpinBox
-        stockée dans l'attribut `_search_input`.
-        """
-        self.clear()
-        # self.tirage.search = self.search_input.value()
         if self.tirage.status == CebStatus.Invalide:
             self.set_result_layout(0)
 
@@ -446,20 +404,17 @@ class QCeb(QWidget):
                 self.random()
                 return
 
-        try:
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-            timer = QElapsedTimer()
-            timer.start()
-            self.tirage()  # Appelle la méthode de résolution
-            self.set_result_layout(timer.elapsed())
-            # noinspection PyUnresolvedReferences
-            self.solutions_table()
-            QApplication.restoreOverrideCursor()
-            self.solutions_table.setFocus()
-            if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-                QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
-        except Exception as e:
-            QMessageBox.critical(self, "Erreur", str(e))
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        timer = QElapsedTimer()
+        timer.start()
+        self.tirage()  # Appelle la méthode de résolution
+        self.set_result_layout(timer.elapsed())
+        # noinspection PyUnresolvedReferences
+        self.solutions_table()
+        QApplication.restoreOverrideCursor()
+        self.solutions_table.setFocus()
+        if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
+            QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
 
     @Slot()
     def apropos(self):

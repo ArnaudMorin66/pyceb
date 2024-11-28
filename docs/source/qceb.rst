@@ -1,4 +1,9 @@
 Classe QCeb : Application Qt
 =============================
 
-.. automodule:: ui.qceb
+.. autoclass:: ui.qceb.QCeb
+
+
+.. automodule:: ui.components
+
+

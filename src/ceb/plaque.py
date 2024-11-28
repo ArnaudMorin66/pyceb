@@ -2,7 +2,9 @@
 Importation
 """
 from __future__ import annotations
+
 from typing import List
+
 from .base import CebBase
 from .notify import IPlaqueNotify
 
@@ -62,7 +64,6 @@ class CebPlaque(CebBase):
         """
         return self._value in PLAQUESUNIQUES
 
-
     def set_value(self, valeur: int):
         """
         Met à jour la valeur de la plaque.
@@ -78,9 +79,9 @@ class CebPlaque(CebBase):
         old = self.value
         super().set_value(valeur)
         self.operations[0] = str(valeur)
-        self.notify_observers(old)
+        self._notify(old)
 
-    def notify_observers(self, old: int):
+    def _notify(self, old: int):
         """
         Notifie les observateurs de la modification de la plaque.
 
@@ -90,7 +91,7 @@ class CebPlaque(CebBase):
         for obs in self._observers:
             obs.plaque_notify(self, old)
 
-    def add_observer(self, observer: IPlaqueNotify):
+    def connect(self, observer: IPlaqueNotify):
         """
         Ajoute un observateur à la liste.
 
@@ -100,7 +101,7 @@ class CebPlaque(CebBase):
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def remove_observer(self, observer: IPlaqueNotify):
+    def disconnect(self, observer: IPlaqueNotify):
         """
         Retire un observateur de la liste.
 

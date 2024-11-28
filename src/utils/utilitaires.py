@@ -2,7 +2,9 @@ import argparse
 import time
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from functools import wraps
-from typing import Callable
+from typing import Callable, List
+
+from ceb import ITypeNotify
 
 
 def singleton(class_):
@@ -114,3 +116,77 @@ class MetaSingleton(type):
         if cls not in cls._instances:
             cls._instances[cls] = super(MetaSingleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
+
+
+class ObservableObject[T](ITypeNotify[T]):
+    """
+    Classe ObservableSearch qui permet de suivre les changements de valeur et de notifier les observateurs.
+    """
+    _observers: List = []
+    _value: T
+
+    def __init__(self, value: T | None = None):
+        """
+        Initialise un nouvel objet ObservableSearch.
+
+        """
+
+        self._observers: List[ITypeNotify[T]] = []
+        if value is not None:
+            self._value = value
+
+    @property
+    def value(self):
+        """
+        Obtient la valeur actuelle de l'objet observable.
+
+        :return: La valeur actuelle.
+        """
+        return self._value
+
+    @value.setter
+    def value(self, new_value: T):
+        """
+        Définit une nouvelle valeur pour l'objet observable et notifie les observateurs si la valeur change.
+
+        :param new_value: La nouvelle valeur à définir.
+        """
+        if self._value != new_value:
+            old_value = self._value
+            self._value = new_value
+            self._notify(old_value)
+
+    def connect(self, observer):
+        """
+        Ajoute un observateur à la liste des observateurs.
+
+        :param observer: L'observateur à ajouter.
+        """
+        if observer not in self._observers:
+            self._observers.append(observer)
+
+    def disconnect(self, observer):
+        """
+        Supprime un observateur de la liste des observateurs.
+
+        :param observer: L'observateur à supprimer.
+        """
+        if observer in self._observers:
+            self._observers.remove(observer)
+
+    def _notify(self, old: T):
+        """
+        Notifie tous les observateurs du changement de valeur.
+
+
+        """
+        for observer in self._observers:
+            observer.notify(self, old)
+
+    def __repr__(self):
+        """
+        Représentation en chaîne de caractères de l'objet observable.
+
+        :return: La valeur actuelle sous forme de chaîne de caractères.
+        """
+        return str(self._value)

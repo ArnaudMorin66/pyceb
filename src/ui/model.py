@@ -1,8 +1,7 @@
 from PySide6.QtCore import QAbstractTableModel, Qt
 from PySide6.QtGui import QColor
 
-from ceb.status import CebStatus
-from ceb.tirage import CebTirage
+from ceb import CebStatus, CebTirage
 
 
 class QCebTirageModel(QAbstractTableModel):

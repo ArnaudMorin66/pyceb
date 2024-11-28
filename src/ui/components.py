@@ -1,8 +1,7 @@
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
-from ceb.notify import IPlaqueNotify, ISearchNotify
-from ceb.plaque import CebPlaque, STRPLAQUESUNIQUES
-from ceb.tirage import CebTirage
+from ceb import (IPlaqueNotify, ITypeNotify,
+                 CebPlaque, STRPLAQUESUNIQUES, CebTirage)
 
 
 class QComboboxPlq(QComboBox, IPlaqueNotify):
@@ -11,7 +10,7 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
     """
     plaque: CebPlaque
 
-    def __init__(self, plaque,parent=None):
+    def __init__(self, plaque, parent=None):
         """
         Initialize the QComboboxPlq.
 
@@ -21,7 +20,7 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
         super().__init__(parent)
 
         self.plaque = plaque
-        self.plaque.add_observer(self)
+        self.plaque.connect(self)
 
         self.setDuplicatesEnabled(False)
         self.addItems(STRPLAQUESUNIQUES)
@@ -37,7 +36,6 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
         """
         self.plaque.value = int(text) if text.isdigit() else 0
 
-
     def plaque_notify(self, plaque: CebPlaque, old: int):
         """
         Slot for handling the notify signal.
@@ -45,14 +43,35 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
         :param plaque: The CebPlaque object.
         :param old: The old value of the plaque.
         """
+        self.currentTextChanged.disconnect(self.oncurrenttextchanged)
         self.setCurrentText(str(plaque.value))
+        self.currentTextChanged.connect(self.oncurrenttextchanged)
 
-class QSpinBoxSearch(QSpinBox, ISearchNotify):
+
+class QSpinBoxSearch(QSpinBox, ITypeNotify[int]):
     """
-    A custom QSpinBox for searching.
+    QSpinBoxSearch is a spin box widget for handling search values in the application.
+
+    This class inherits from QSpinBox and ITypeNotify[int], and is used to manage integer search values.
+    It initializes with a given tirage object, sets up the spin box range and properties, and connects
+    signals to slots for handling value changes.
+
+    Attributes:
+        _tirage (CebTirage): The tirage object associated with this spin box.
+
+    Methods:
+        __init__(self, tirage, parent=None):
+            Initialize the QSpinBoxSearch.
+
+        onvaluechanged(self, value: int):
+            Slot for handling the valueChanged signal.
+
+        notify(self, sender, old):
+            Notification handler for updating value from sender.
     """
     _tirage: CebTirage = None
-    def __init__(self, tirage,  parent=None):
+
+    def __init__(self, tirage, parent=None):
         """
         Initialize the QSpinBoxSearch.
 
@@ -64,8 +83,7 @@ class QSpinBoxSearch(QSpinBox, ISearchNotify):
         self.setValue(tirage.search)
         self.setAccelerated(True)
         self.valueChanged.connect(self.onvaluechanged)
-        self._tirage.add_search_observer(self)
-
+        self._tirage.connect_search(self)
 
     def onvaluechanged(self, value: int):
         """
@@ -73,9 +91,16 @@ class QSpinBoxSearch(QSpinBox, ISearchNotify):
 
         :param value: The value of the spin box.
         """
-        self._tirage.remove_search_observer(self)
-        self._tirage.search= value
-        self._tirage.add_search_observer(self)
 
-    def search_notify(self, new, old):
-        self.setValue(new)
+        self._tirage.search = value
+
+    def notify(self, sender, old):
+        """
+        Notification handler for updating the spin box value from the sender.
+
+        :param sender: The object sending the notification.
+        :param old: The old value before the update.
+        """
+        self.valueChanged.disconnect(self.onvaluechanged)
+        self.setValue(sender.value)
+        self.valueChanged.connect(self.onvaluechanged)

@@ -1,30 +1,41 @@
-#####################
-Documentation API Ceb
-#####################
+#######
+Ceb API
+#######
 
 Voici la documentation pour le module `ceb`.
 
+ceb
+===
+.. automodule:: ceb
+
 CebBase
 =======
-.. autoclass:: ceb.CebBase
+.. automodule:: ceb.base
 
 CebOperation
 ============
-.. autoclass:: ceb.CebOperation
+.. automodule:: ceb.operation
 
 CebPlaque
 =========
-.. autoclass:: ceb.CebPlaque
+.. automodule:: ceb.plaque
 
 CebTirage
 =========
-.. autoclass:: ceb.CebTirage
+.. automodule:: ceb.tirage
 
 CebStatus
 =========
-.. autoclass:: ceb.CebStatus
+.. automodule:: ceb.status
 
-Resolve
-=======
+solve
+=====
 
-.. autofunction:: ceb.tirage.resolve
+.. autofunction:: ceb.tirage.solve
+
+ObservableSearch
+================
+
+.. autoclass:: ceb.observablesearch.ObservableSearch
+
+#####################

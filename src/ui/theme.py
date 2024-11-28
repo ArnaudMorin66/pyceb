@@ -3,7 +3,7 @@ from enum import Enum
 
 from PySide6.QtWidgets import QApplication
 
-from util.utilitaires import singleton
+from utils.utilitaires import singleton
 
 THEME_DIRECTORY = os.path.join(os.path.dirname(__file__), "theme")
 

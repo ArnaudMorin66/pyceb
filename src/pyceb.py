@@ -10,11 +10,9 @@ import keyboard
 from rich.console import Console
 from rich.table import Table
 
-from ceb.status import CebStatus
-from ceb.tirage import CebTirage
-# from ceb import CebTirage, CebStatus
+from ceb import CebStatus, CebTirage
 from ui.qceb import qceb_exec
-from util.utilitaires import parse_args, ellapsed_exec
+from utils.utilitaires import parse_args, ellapsed_exec
 
 
 class QCompteEstBon:
@@ -61,7 +59,6 @@ class QCompteEstBon:
                 if len(self.args.integers) > 6:
                     self.tirage.search = self.args.integers[6]
 
-
     @ellapsed_exec
     def run_tirage(self):
         """
@@ -91,7 +88,7 @@ class QCompteEstBon:
             self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.search}",
                                style="bold yellow")
 
-            ellapsed, status =  self.run_tirage()
+            ellapsed, status = self.run_tirage()
 
             self.console.print()
 

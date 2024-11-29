@@ -7,6 +7,16 @@ from ceb import CebTirage, CebStatus, CebPlaque
 
 
 class QTirage(CebTirage):
+    """
+    Represents an extended version of CebTirage with timing abilities.
+
+    This class is derived from CebTirage and adds functionality to keep
+    track of the duration of solve operations. It uses Qt's timing mechanisms
+    to measure the time taken for computation and provides an interface
+    to retrieve the elapsed time in milliseconds. This class is particularly
+    useful for applications where performance measurement is necessary for
+    solve operations.
+    """
     _duree = 0
 
     def __init__(self, parent=None):

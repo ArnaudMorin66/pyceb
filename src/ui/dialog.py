@@ -1,5 +1,5 @@
 from PySide6.QtCore import QTimer, Qt
-from PySide6.QtWidgets import QDialog, QGridLayout, QListWidget
+from PySide6.QtWidgets import QDialog, QGridLayout, QListWidget, QVBoxLayout, QLabel
 
 
 class QSolutionDialog(QDialog):
@@ -22,17 +22,24 @@ class QSolutionDialog(QDialog):
         super().__init__()
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setModal(True)
+        self.resize(200, 164)
+        vlayout = QVBoxLayout()
+        title = QLabel(str(status), self)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("font-size: 16pt; font-weight: bold; border: 2px solid yellow;")
+        vlayout.addWidget(title)
         layout = QGridLayout()
         list_widget = QListWidget(self)
         list_widget.setAlternatingRowColors(True)
-        list_widget.addItem(str(status))
         list_widget.addItems(solution.operations)
         for index in range(list_widget.count()):
             item = list_widget.item(index)
             item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         list_widget.mousePressEvent = lambda event: self.accept()
+        list_widget.autoFillBackground()
         layout.addWidget(list_widget)
-        self.setLayout(layout)
+        vlayout.addLayout(layout)
+        self.setLayout(vlayout)
         #: Ajouter un timer pour fermer la boîte de dialogue après 5 secondes
         self.timer = QTimer(self)
         self.timer.setSingleShot(True)

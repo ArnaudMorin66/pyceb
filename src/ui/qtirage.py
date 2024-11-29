@@ -36,7 +36,7 @@ class QTirage(CebTirage):
         """
         return self._duree
 
-    def solve(self, plaques: List[int | CebPlaque] = (), search: int = 0) -> CebStatus:
+    def solve(self) -> CebStatus:
         """
         Solve the given plaques and measure the time taken.
 
@@ -44,10 +44,11 @@ class QTirage(CebTirage):
         :param search: The search parameter.
         :return: The status of the solve operation.
         """
+        self._duree = 0
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         timer = QElapsedTimer()
         timer.start()
-        status = super().solve(plaques, search)
+        status = super().solve()
         self._duree = timer.elapsed()
         QApplication.restoreOverrideCursor()
         return status
@@ -56,5 +57,5 @@ class QTirage(CebTirage):
         """
         Clear the current state and reset the duration.
         """
-        self._duree = 0
         super().clear()
+        self._duree = 0

@@ -11,7 +11,7 @@ import pickle
 import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
-from typing import List
+from typing import List, overload
 
 from ceb.base import CebBase
 from ceb.notify import IPlaqueNotify
@@ -348,20 +348,12 @@ class CebTirage(IPlaqueNotify):
         elif sol not in self._solutions:
             self._solutions.append(sol)
 
-    def solve(
-            self, plaques: List[int | CebPlaque] = (), search: int = 0
-    ) -> CebStatus:
+    def solve(self):
         """
         Résout le problème en utilisant les plaques et la valeur de recherche fournies.
 
-        :param plaques: Liste d'entiers ou d'objets CebPlaque représentant les plaques.
-        :param search: Valeur entière à rechercher.
         :return: Le statut actuel de l'objet CebTirage.
         """
-        if search and len(plaques) == 6:
-            self._search.value = search
-            self.plaques = plaques
-
         if self._status == CebStatus.Invalide:
             return self._status
 
@@ -371,6 +363,20 @@ class CebTirage(IPlaqueNotify):
         self.status = CebStatus.CompteEstBon \
             if self._solutions[0].value == self.search else CebStatus.CompteApproche
         return self._status
+
+    def solve_with_param(
+            self, plaques: List[int | CebPlaque] , search: int ) -> CebStatus:
+        """
+        Résout le problème en utilisant les plaques et la valeur de recherche fournies.
+
+        :param plaques: Liste d'entiers ou d'objets CebPlaque représentant les plaques.
+        :param search: Valeur entière à rechercher.
+        :return: Le statut actuel de l'objet CebTirage.
+        """
+        self._search.value = search
+        self.plaques = plaques
+        return self.solve()
+
 
     async def solve_async(self) -> CebStatus:
         """

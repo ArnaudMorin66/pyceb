@@ -1,3 +1,4 @@
+from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
 from ceb import (IPlaqueNotify, ITypeNotify,
@@ -43,31 +44,14 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
         :param plaque: The CebPlaque object.
         :param old: The old value of the plaque.
         """
-        self.currentTextChanged.disconnect(self.oncurrenttextchanged)
-        self.setCurrentText(str(plaque.value))
-        self.currentTextChanged.connect(self.oncurrenttextchanged)
+        with QSignalBlocker(self):
+            self.setCurrentText(str(plaque.value))
+
 
 
 class QSpinBoxSearch(QSpinBox, ITypeNotify[int]):
     """
-    QSpinBoxSearch is a spin box widget for handling search values in the application.
 
-    This class inherits from QSpinBox and ITypeNotify[int], and is used to manage integer search values.
-    It initializes with a given tirage object, sets up the spin box range and properties, and connects
-    signals to slots for handling value changes.
-
-    Attributes:
-        _tirage (CebTirage): The tirage object associated with this spin box.
-
-    Methods:
-        __init__(self, tirage, parent=None):
-            Initialize the QSpinBoxSearch.
-
-        onvaluechanged(self, value: int):
-            Slot for handling the valueChanged signal.
-
-        notify(self, sender, old):
-            Notification handler for updating value from sender.
     """
     _tirage: CebTirage = None
 
@@ -101,6 +85,5 @@ class QSpinBoxSearch(QSpinBox, ITypeNotify[int]):
         :param sender: The object sending the notification.
         :param old: The old value before the update.
         """
-        self.valueChanged.disconnect(self.onvaluechanged)
-        self.setValue(sender.value)
-        self.valueChanged.connect(self.onvaluechanged)
+        with QSignalBlocker(self):
+            self.setValue(sender.value)

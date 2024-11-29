@@ -20,11 +20,12 @@ class QSolutionDialog(QDialog):
             status: Le statut du tirage.
         """
         super().__init__()
-        self.setWindowTitle(str(status))
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setModal(True)
         layout = QGridLayout()
         list_widget = QListWidget(self)
         list_widget.setAlternatingRowColors(True)
+        list_widget.addItem(str(status))
         list_widget.addItems(solution.operations)
         for index in range(list_widget.count()):
             item = list_widget.item(index)

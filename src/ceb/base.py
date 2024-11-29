@@ -29,13 +29,7 @@ class CebBase:
         """
         return self._value
 
-    def set_value(self, valeur: int):
-        """
-        Définit la valeur de l'objet.
 
-        :param valeur: La nouvelle valeur à définir.
-        """
-        self._value = valeur
 
     @value.setter
     def value(self, valeur: int):
@@ -46,6 +40,13 @@ class CebBase:
         """
         self.set_value(valeur)
 
+    def set_value(self, valeur: int):
+        """
+        Définit la valeur de l'objet.
+
+        :param valeur: La nouvelle valeur à définir.
+        """
+        self._value = valeur
     @property
     def rank(self) -> int:
         """

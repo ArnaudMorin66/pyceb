@@ -30,12 +30,6 @@ class QSolutionsView(QTableView):
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-    def __call__(self):
-        """
-        Update the QSolutionsView with a new CebTirage.
-
-    """
-        self.model().layoutChanged.emit()
 
     def refresh(self):
         """

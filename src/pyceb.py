@@ -11,11 +11,11 @@ from rich.console import Console
 from rich.table import Table
 
 from ceb import CebStatus, CebTirage
-from ui.qceb import qceb_exec
-from utils.utilitaires import parse_args, ellapsed_exec
+from ui import qceb_exec
+from utils import parse_args, ellapsed_exec
 
 
-class QCompteEstBon:
+class PyCeb:
     """
     Classe principale pour le jeu du Compte est bon.
     """
@@ -33,6 +33,7 @@ class QCompteEstBon:
         self.console = Console()
         self.wait = False
         self.tirage = CebTirage()
+        self.tirage.block_plaques()
 
     def configure_tirage(self):
         """
@@ -60,7 +61,7 @@ class QCompteEstBon:
                     self.tirage.search = self.args.integers[6]
 
     @ellapsed_exec
-    def run_tirage(self):
+    def solve_tirage(self):
         """
         Decorator that measures the elapsed execution time of a function.
 
@@ -74,7 +75,7 @@ class QCompteEstBon:
         Any
             Returns the result of the method it decorates.
         """
-        return self.tirage()
+        return self.tirage.solve()
 
     def display_tirage(self):
         """
@@ -88,7 +89,7 @@ class QCompteEstBon:
             self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.search}",
                                style="bold yellow")
 
-            ellapsed, status = self.run_tirage()
+            ellapsed, status = self.solve_tirage()
 
             self.console.print()
 
@@ -144,5 +145,5 @@ if __name__ == "__main__":
         qceb_exec()
     else:
         # Crée une instance de CompteEstBon et exécute le programme principal
-        compte_est_bon = QCompteEstBon(args)
+        compte_est_bon = PyCeb(args)
         compte_est_bon.run()

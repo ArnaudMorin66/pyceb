@@ -3,7 +3,7 @@ Importation
 """
 from __future__ import annotations
 
-from typing import List
+from typing import List, override
 
 from .base import CebBase
 from .notify import IPlaqueNotify
@@ -49,6 +49,7 @@ class CebPlaque(CebBase):
         classe définissant une plaque du jeu 
     """
     _observers: List[IPlaqueNotify] = []
+    _disabled: bool = False
 
     def __init__(self, v: int = 0, obs: IPlaqueNotify = None):
         super().__init__()
@@ -64,6 +65,7 @@ class CebPlaque(CebBase):
         """
         return self._value in PLAQUESUNIQUES
 
+    @override
     def set_value(self, valeur: int):
         """
         Met à jour la valeur de la plaque.
@@ -81,6 +83,21 @@ class CebPlaque(CebBase):
         self.operations[0] = str(valeur)
         self._notify(old)
 
+    def is_disable(self) -> bool:
+        """
+        Indique si les notifications sont bloquées.
+
+        Returns:
+            bool: True si les notifications sont bloquées, False sinon.
+        """
+        return self._disabled
+
+    def disable(self, value: bool = True):
+        """
+        Bloque les notifications. ou les débloque
+        """
+        self._disabled = value
+
     def _notify(self, old: int):
         """
         Notifie les observateurs de la modification de la plaque.
@@ -88,6 +105,8 @@ class CebPlaque(CebBase):
         Args:
             old (int): L'ancienne valeur de la plaque.
         """
+        if self._disabled:
+            return
         for obs in self._observers:
             obs.plaque_notify(self, old)
 

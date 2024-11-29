@@ -27,6 +27,7 @@ EXTENSION_METHODS = {
     ".csv": "save_to_csv"
 }
 
+OPERATIONS = ["x", "+", "-", "/"]
 
 class CebTirage(IPlaqueNotify):
     """
@@ -34,7 +35,7 @@ class CebTirage(IPlaqueNotify):
     """
 
     def __init__(
-            self, plaques: List[int] = (), search: int = 0) -> None:
+            self, plaques=None, search: int = 0) -> None:
         """
             Initialise une instance de CebTirage.
 
@@ -42,6 +43,8 @@ class CebTirage(IPlaqueNotify):
             :param search: Valeur entière à rechercher.
             """
         super().__init__()
+        if plaques is None:
+            plaques = []
         self._plaques: List[CebPlaque] = []
 
         self._search: ObservableObject[int] = ObservableObject(0)
@@ -53,13 +56,14 @@ class CebTirage(IPlaqueNotify):
             self._plaques.append(CebPlaque(0, self))
 
         self._search.value = search
+
         if search and plaques:
-            self.clear()
+            pass
         elif search == 0 and len(plaques) > 0:
             self._search.value = randint(100, 999)
-            self.clear()
         else:
             self.random()
+        self.clear()
 
     def connect_search(self, observer):
         """
@@ -77,31 +81,33 @@ class CebTirage(IPlaqueNotify):
         """
         self._search.disconnect(observer)
 
-    def connect_plaques(self, plaque_notify: IPlaqueNotify):
+    def connect_plaques(self, plaque_notify: IPlaqueNotify=None):
         """
         Attache un observateur à toutes les plaques.
 
         :param plaque_notify: L'observateur à attacher.
         """
         for plaque in self._plaques:
-            plaque.connect(plaque_notify)
+            plaque.connect(plaque_notify if plaque_notify else self)
 
-    def disconnect_plaques(self, notify_plaque: IPlaqueNotify):
+    def disconnect_plaques(self, notify_plaque: IPlaqueNotify=None):
         """
         Détache un observateur de toutes les plaques.
 
         :param notify_plaque: L'observateur à détacher.
         """
         for plaque in self._plaques:
-            plaque.disconnect(notify_plaque)
+            plaque.disconnect(notify_plaque if notify_plaque else self)
 
-    def __call__(self):
+    def block_plaques(self, value: bool = True):
         """
-        Appelle la méthode `solve` pour résoudre le problème.
+        Bloque les notifications pour toutes les plaques.
 
-        :return: Le statut actuel de l'objet CebTirage après résolution.
+        :param value: True pour bloquer les notifications, False pour les débloquer.
         """
-        return self.solve()
+        for plaque in self._plaques:
+            plaque.disable(value)
+
 
     def clear(self) -> CebStatus:
         """
@@ -119,18 +125,55 @@ class CebTirage(IPlaqueNotify):
 
     @property
     def found(self) -> list[int]:
+        """
+        Get unique, sorted list of values from solutions
+
+        Returns:
+            list[int]: A unique, sorted list of integer values from self.solutions.
+        """
         return sorted(set([k.value for k in self.solutions]))
 
     @property
     def str_found(self) -> str:
+        """
+        str_found
+
+        Returns a comma-separated string of found elements.
+
+        Returns:
+             str: A string containing the elements of the 'found' list, separated by commas.
+        """
         return ", ".join(map(str, self.found))
 
     @property
     def search(self) -> int:
+        """
+        Represents a search property.
+
+        This property returns the value of the `_search` attribute's `value`.
+
+        @property
+        @return: The integer value of the `_search` attribute.
+        """
         return self._search.value
 
     @search.setter
     def search(self, value: int):
+        """
+        Set the search value and clear the results if the value changes.
+
+        Setter for the search attribute, which updates the value and clears any
+        existing results if the new value differs from the current one.
+
+        Args:
+            value (int): The new search value.
+
+        Raises:
+            None
+
+        Returns:
+            None
+        """
         if value == self._search.value:
             return
         self._search.value = value
@@ -145,26 +188,47 @@ class CebTirage(IPlaqueNotify):
 
         :return: Le statut actuel de l'objet CebTirage après réinitialisation.
         """
-        self.disconnect_plaques(self)
+        self.disconnect_plaques()
         self.search = randint(100, 999)
         liste_plaques = LISTEPLAQUES[:]
         for plaque in self._plaques:
             index = randint(0, len(liste_plaques) - 1)
             plaque.value = liste_plaques[index]
             liste_plaques.pop(index)
-        self.connect_plaques(self)
+        self.connect_plaques()
         return self.clear()
 
     @property
     def json(self) -> str:
+        """
+
+        Returns the result of the object in JSON format.
+
+        @return: JSON string representation of the result attribute.
+        @rtype: str
+        """
         return json.dumps(self.result)
 
     @property
     def ecart(self) -> int:
+        """
+        Calculate the difference between two values.
+
+        Returns:
+            int: The difference between the compared values.
+        """
         return self._diff
 
     @property
     def count(self) -> int:
+        """
+        Returns the number of solutions.
+
+        This property calculates the number of elements in the 'solutions' list and returns it. It provides a way to access the number of stored solutions without directly interacting with the 'solutions' list.
+
+        Returns:
+            int: The number of solutions in the list.
+        """
         return len(self.solutions)
 
     @property
@@ -181,18 +245,49 @@ class CebTirage(IPlaqueNotify):
 
     @property
     def status(self) -> CebStatus:
+        """
+        Get the current status of the object.
+
+        This property retrieves the current status of the object, which is an instance of CebStatus.
+
+        Returns:
+            CebStatus: The current status of the object.
+        """
         return self._status
 
     @status.setter
     def status(self, value: CebStatus):
+        """
+        Sets the status of the object to the given value.
+
+        Parameters:
+            value (CebStatus): The new status to be set.
+
+        """
         self._status = value
 
     @property
     def plaques(self) -> List[CebPlaque]:
+        """
+        Returns a list of CebPlaque objects associated with this instance.
+
+        Returns
+        -------
+        List[CebPlaque]
+            A list containing CebPlaque objects.
+        """
         return self._plaques
 
     @plaques.setter
     def plaques(self, plq: List[int]):
+        """
+        Sets the values of the plaques attribute with the provided list of integers.
+        Only the first six values of the provided list are considered.
+
+        Args:
+            plq (List[int]): A list of integers representing the new values for the
+            plaques attribute.
+        """
         for index, value in enumerate(plq[:6]):
             self._plaques[index].value = value
         self.clear()
@@ -304,17 +399,17 @@ class CebTirage(IPlaqueNotify):
             :param jj: Index de la deuxième plaque.
             :return: Nouvelle liste de plaques après application de l'opération.
             """
-            return [ceb_operation] + [x for k, x in enumerate(current_list) if k not in (ii, jj)]
+            return [x for k, x in enumerate(current_list) if k not in (ii, jj)] + [ceb_operation]
 
         stack = [plaques]
-        operations = ["x", "+", "-", "/"]
+
         while stack:
             current_liste = stack.pop()
             for ix, plq in enumerate(current_liste):
                 self._add_solution(plq)
                 for jx in range(ix + 1, len(current_liste)):
                     q = current_liste[jx]
-                    for operation in operations:
+                    for operation in OPERATIONS:
                         oper: CebOperation = CebOperation(plq, operation, q)
                         if oper.value:
                             stack.append(next_list(current_liste, oper, ix, jx))

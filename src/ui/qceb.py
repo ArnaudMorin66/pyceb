@@ -6,7 +6,7 @@ import sys
 import time
 from typing import List, Self
 
-from PySide6.QtCore import Slot, Qt, QElapsedTimer, QModelIndex
+from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QIcon, QAction, QKeySequence, QCursor
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
                                QHBoxLayout, QComboBox, QSpinBox, QLayout,
@@ -14,11 +14,10 @@ from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, 
                                QFileDialog, QSystemTrayIcon)
 
 import ui.qceb_rcc  # noqa: F401
-from ceb import CebStatus, CebTirage
-from ui import QComboboxPlq, QSpinBoxSearch
-from ui import QSolutionDialog
-from ui import QSolutionsView
-from ui import QThemeManager, Theme
+from ceb import CebStatus
+from ui import (QComboboxPlq, QSpinBoxSearch,
+                QSolutionDialog, QSolutionsView,
+                QThemeManager, Theme, QTirage)
 from utils import singleton
 
 
@@ -29,7 +28,7 @@ class QCeb(QWidget):
     """
     # _instance = None  #: Instance unique de QCeb.
 
-    tirage: CebTirage  #:  Instance de CebTirage pour gérer le tirage actuel.
+    tirage: QTirage  #:  Instance de CebTirage pour gérer le tirage actuel.
 
     plaques_inputs: List[QComboBox] = []  #: Liste des QComboBox pour les plaques.
 
@@ -73,10 +72,10 @@ class QCeb(QWidget):
         et ajoute les différents layouts pour les entrées, commandes, résultats et solutions.
         """
         super().__init__()
-        self.tirage = CebTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
+        self.tirage = QTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
+
         self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
         self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
-
         self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
         self.add_inputs_layout()
         self.add_command_layout()
@@ -84,9 +83,6 @@ class QCeb(QWidget):
         self.add_solutions_table()
         self.setLayout(self.tirageform_layout)  # Définit le layout principal de la fenêtre.
         self.set_context_menu()  # Configure le menu contextuel de l'application.
-
-    def __call__(self):
-        self.show()
 
     def set_context_menu(self):
         """
@@ -302,12 +298,11 @@ class QCeb(QWidget):
             label.clear()
         self.setWindowTitle("Jeux du Compte est bon")
 
-    def set_result_layout(self, duree: int):
+    def set_result_layout(self):
         """
         Met à jour le layout des résultats avec les informations du tirage actuel.
 
-        Args:
-            duree (int): La durée de la résolution en millisecondes.
+
         """
         color = {
             CebStatus.CompteEstBon: "green",
@@ -320,7 +315,7 @@ class QCeb(QWidget):
                 f"Trouvé(s): {self.tirage.str_found}",
                 f"{f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche else ''}",
                 f"Nombre de solutions: {self.tirage.count}",
-                f"Durée: {duree / 1000.0:.3f} s"
+                f"Durée: {self.tirage.duree / 1000.0:.3f} s"
             ]
 
         for ix, result in enumerate(results):
@@ -366,7 +361,7 @@ class QCeb(QWidget):
         """
         self.clear()
         if self.tirage.status == CebStatus.Invalide:
-            self.set_result_layout(0)
+            self.set_result_layout()
 
     @Slot()
     def clear(self) -> None:
@@ -377,7 +372,7 @@ class QCeb(QWidget):
         Elle met ensuite à jour le modèle de données et efface le texte des labels de résultats.
         """
         # noinspection PyUnresolvedReferences
-        self.solutions_table()
+        self.solutions_table.refresh()
         self.clear_result_layout()
 
     @Slot()
@@ -404,14 +399,10 @@ class QCeb(QWidget):
                 self.random()
                 return
 
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        timer = QElapsedTimer()
-        timer.start()
-        self.tirage()  # Appelle la méthode de résolution
-        self.set_result_layout(timer.elapsed())
+        self.tirage.solve()  # Appelle la méthode de résolution
+        self.set_result_layout()
         # noinspection PyUnresolvedReferences
-        self.solutions_table()
-        QApplication.restoreOverrideCursor()
+        self.solutions_table.refresh()
         self.solutions_table.setFocus()
         if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
             QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
@@ -454,8 +445,7 @@ def qceb_exec():
     app.setOrganizationName("© Arnaud Morin")
     app.setWindowIcon(QIcon(":/images/apropos.png"))
     QThemeManager().theme = Theme.dark
-    window = QCeb()
-    window()
+    QCeb().show()
     sys.exit(app.exec())
 
 

@@ -13,8 +13,8 @@ from random import randint
 from sys import maxsize
 from typing import List
 
+from ceb import IObserverNotify
 from ceb.base import CebBase
-from ceb.notify import IPlaqueNotify
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.status import CebStatus
@@ -29,7 +29,7 @@ EXTENSION_METHODS = {
 
 OPERATIONS = ["x", "+", "-", "/"]
 
-class CebTirage(IPlaqueNotify):
+class CebTirage(IObserverNotify):
     """
     Tirage Plaques et Recherche
     """
@@ -327,15 +327,7 @@ class CebTirage(IPlaqueNotify):
                     break
         return self._status
 
-    def plaque_notify(self, sender, old):
-        """
-        Notifie un changement de paramètre et réinitialise l'état de l'objet CebTirage.
-
-        Cette méthode appelle la méthode `clear` pour réinitialiser l'état de l'objet.
-
-        :param sender: Ancienne valeur du paramètre.
-        :param old: Nouvelle valeur du paramètre.
-        """
+    def observer_notify(self, sender,  old):
         self.clear()
 
     @property

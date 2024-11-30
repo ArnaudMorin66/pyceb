@@ -1,5 +1,5 @@
 from .base import CebBase
-from .notify import IPlaqueNotify, ITypeNotify  #
+from .notify import IObserverNotify  #
 from .operation import CebOperation
 from .plaque import CebPlaque, LISTEPLAQUES, PLAQUESUNIQUES, STRPLAQUESUNIQUES
 from .status import CebStatus
@@ -15,6 +15,5 @@ __all__ = [
     "CebStatus",
     "CebTirage",
     "solve",
-    "IPlaqueNotify",
-    "ITypeNotify"
+    "IObserverNotify",
 ]

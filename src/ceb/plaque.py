@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from typing import List, override
 
+from utils import ObservableBase
 from .base import CebBase
-from .notify import IPlaqueNotify
 
 #: Liste des plaques disponibles
 LISTEPLAQUES: List[int] = [
@@ -44,13 +44,10 @@ PLAQUESUNIQUES = sorted(set(LISTEPLAQUES))
 STRPLAQUESUNIQUES = [str(x) for x in PLAQUESUNIQUES]
 
 
-class CebPlaque(CebBase):
+class CebPlaque(CebBase, ObservableBase):
     """
         classe définissant une plaque du jeu 
     """
-    _observers: List[IPlaqueNotify] = []
-    _disabled: bool = False
-
     def __init__(self, v: int = 0, obs: IPlaqueNotify = None):
         super().__init__()
         self._value = v
@@ -81,57 +78,5 @@ class CebPlaque(CebBase):
         old = self.value
         super().set_value(valeur)
         self.operations[0] = str(valeur)
-        self._notify(old)
+        self._notify(self, old)
 
-    def is_disable(self) -> bool:
-        """
-        Indique si les notifications sont bloquées.
-
-        Returns:
-            bool: True si les notifications sont bloquées, False sinon.
-        """
-        return self._disabled
-
-    def enable(self):
-        """
-        Débloque les notifications.
-        """
-        self._disabled = False
-
-    def disable(self):
-        """
-        Bloque les notifications. ou les débloque
-        """
-        self._disabled = True
-
-    def _notify(self, old: int):
-        """
-        Notifie les observateurs de la modification de la plaque.
-
-        Args:
-            old (int): L'ancienne valeur de la plaque.
-        """
-        if self._disabled:
-            return
-        for obs in self._observers:
-            obs.plaque_notify(self, old)
-
-    def connect(self, observer: IPlaqueNotify):
-        """
-        Ajoute un observateur à la liste.
-
-        Args:
-            observer (IPlaqueNotify): L'observateur à ajouter.
-        """
-        if observer not in self._observers:
-            self._observers.append(observer)
-
-    def disconnect(self, observer: IPlaqueNotify):
-        """
-        Retire un observateur de la liste.
-
-        Args:
-            observer (IPlaqueNotify): L'observateur à retirer.
-        """
-        if observer in self._observers:
-            self._observers.remove(observer)

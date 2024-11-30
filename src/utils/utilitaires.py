@@ -4,7 +4,7 @@ from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from functools import wraps
 from typing import Callable, List
 
-from ceb import ITypeNotify
+from ceb import IObserverNotify
 
 
 def singleton(class_):
@@ -118,45 +118,9 @@ class MetaSingleton(type):
         return cls._instances[cls]
 
 
-class ObservableObject[T](ITypeNotify[T]):
-    """
-    Classe ObservableSearch qui permet de suivre les changements de valeur et de notifier les observateurs.
-    """
-    _observers: List = []
-    _value: T
+class ObservableBase:
+    _observers: List[IObserverNotify] = []
     _enabled: bool = True
-
-    def __init__(self, value: T | None = None):
-        """
-        Initialise un nouvel objet ObservableSearch.
-
-        """
-
-        self._observers: List[ITypeNotify[T]] = []
-        if value is not None:
-            self._value = value
-
-    @property
-    def value(self):
-        """
-        Obtient la valeur actuelle de l'objet observable.
-
-        :return: La valeur actuelle.
-        """
-        return self._value
-
-    @value.setter
-    def value(self, new_value: T):
-        """
-        Définit une nouvelle valeur pour l'objet observable et notifie les observateurs si la valeur change.
-
-        :param new_value: La nouvelle valeur à définir.
-        """
-        if self._value == new_value:
-            return
-        old_value = self._value
-        self._value = new_value
-        self._notify(old_value)
 
     def connect(self, observer):
         """
@@ -202,13 +166,51 @@ class ObservableObject[T](ITypeNotify[T]):
         """
         self._enabled = False
         
-    def _notify(self, old: T):
+    def _notify(self, sender, old):
         """
         Notifie tous les observateurs du changement de valeur.
         """
         if self._enabled:
             for observer in self._observers:
-                observer.notify(self, old)
+                observer.observer_notify(sender, old)
+
+
+class ObservableObject[T](ObservableBase):
+    """
+    Classe ObservableSearch qui permet de suivre les changements de valeur et de notifier les observateurs.
+    """
+    _value: T
+
+    def __init__(self, value: T | None = None):
+        """
+        Initialise un nouvel objet ObservableSearch.
+
+        """
+
+        if value is not None:
+            self._value = value
+
+    @property
+    def value(self):
+        """
+        Obtient la valeur actuelle de l'objet observable.
+
+        :return: La valeur actuelle.
+        """
+        return self._value
+
+    @value.setter
+    def value(self, new_value: T):
+        """
+        Définit une nouvelle valeur pour l'objet observable et notifie les observateurs si la valeur change.
+
+        :param new_value: La nouvelle valeur à définir.
+        """
+        if self._value == new_value:
+            return
+        old_value = self._value
+        self._value = new_value
+        self._notify(self, old_value)
 
     def __repr__(self):
         """
@@ -217,7 +219,5 @@ class ObservableObject[T](ITypeNotify[T]):
         :return: La valeur actuelle sous forme de chaîne de caractères.
         """
         return str(self._value)
-
-
 
 

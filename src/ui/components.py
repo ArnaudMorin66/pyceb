@@ -1,11 +1,10 @@
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
-from ceb import (IPlaqueNotify, ITypeNotify,
-                 CebPlaque, STRPLAQUESUNIQUES, CebTirage)
+from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebTirage, IObserverNotify)
 
 
-class QComboboxPlq(QComboBox, IPlaqueNotify):
+class QComboboxPlq(QComboBox, IObserverNotify):
     """
     A custom QComboBox for handling CebPlaque objects.
     """
@@ -39,7 +38,7 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
         self.plaque.value = int(text) if text.isdigit() else 0
         self.plaque.connect(self)
 
-    def plaque_notify(self, plaque: CebPlaque, old: int):
+    def observer_notify(self, plaque: CebPlaque, old: int):
         """
         Slot for handling the notify signal.
 
@@ -50,8 +49,7 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
             self.setCurrentText(str(plaque.value))
 
 
-
-class QSpinBoxSearch(QSpinBox, ITypeNotify[int]):
+class QSpinBoxSearch(QSpinBox, IObserverNotify):
     """
 
     """
@@ -81,7 +79,7 @@ class QSpinBoxSearch(QSpinBox, ITypeNotify[int]):
         self._tirage.search = value
         self._tirage.connect_search(self)
 
-    def notify(self, sender, old):
+    def observer_notify(self, sender, old):
         """
         Notification handler for updating the spin box value from the sender.
 

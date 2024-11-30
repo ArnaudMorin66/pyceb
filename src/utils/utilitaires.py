@@ -124,7 +124,7 @@ class ObservableObject[T](ITypeNotify[T]):
     """
     _observers: List = []
     _value: T
-    _disabled: bool = False
+    _enabled: bool = True
 
     def __init__(self, value: T | None = None):
         """
@@ -152,10 +152,11 @@ class ObservableObject[T](ITypeNotify[T]):
 
         :param new_value: La nouvelle valeur à définir.
         """
-        if self._value != new_value:
-            old_value = self._value
-            self._value = new_value
-            self._notify(old_value)
+        if self._value == new_value:
+            return
+        old_value = self._value
+        self._value = new_value
+        self._notify(old_value)
 
     def connect(self, observer):
         """
@@ -163,7 +164,6 @@ class ObservableObject[T](ITypeNotify[T]):
 
         :param observer: L'observateur à ajouter.
         """
-        self._disabled = False
         if observer not in self._observers:
             self._observers.append(observer)
 
@@ -173,45 +173,42 @@ class ObservableObject[T](ITypeNotify[T]):
 
         :param observer: L'observateur à supprimer.
         """
-        self._disabled = True
         if observer in self._observers:
             self._observers.remove(observer)
+
     def disconnect_all(self):
         """
         Supprime tous les observateurs de la liste des observateurs.
         """
-        self._disabled = True
         self._observers.clear()
-    def is_disabled(self):
+
+    def is_enabled(self):
         """
         Indique si les notifications sont désactivées.
 
         :return: True si les notifications sont désactivées, False sinon.
         """
-        return self._disabled
+        return self._enabled
 
     def enable(self):
         """
         Active les notifications.
         """
-        self._disabled = False
+        self._enabled = True
 
     def disable(self):
         """
         Désactive les notifications.
         """
-        self._disabled = True
+        self._enabled = False
         
     def _notify(self, old: T):
         """
         Notifie tous les observateurs du changement de valeur.
-
-
         """
-        if self._disabled:
-            return
-        for observer in self._observers:
-            observer.notify(self, old)
+        if self._enabled:
+            for observer in self._observers:
+                observer.notify(self, old)
 
     def __repr__(self):
         """
@@ -220,3 +217,7 @@ class ObservableObject[T](ITypeNotify[T]):
         :return: La valeur actuelle sous forme de chaîne de caractères.
         """
         return str(self._value)
+
+
+
+

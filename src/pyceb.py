@@ -33,7 +33,6 @@ class PyCeb:
         self.console = Console()
         self.wait = False
         self.tirage = CebTirage()
-        self.tirage.block_plaques()
 
     def configure_tirage(self):
         """

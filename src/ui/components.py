@@ -35,7 +35,9 @@ class QComboboxPlq(QComboBox, IPlaqueNotify):
 
         :param text: The text of the current item.
         """
+        self.plaque.disconnect(self)
         self.plaque.value = int(text) if text.isdigit() else 0
+        self.plaque.connect(self)
 
     def plaque_notify(self, plaque: CebPlaque, old: int):
         """
@@ -75,8 +77,9 @@ class QSpinBoxSearch(QSpinBox, ITypeNotify[int]):
 
         :param value: The value of the spin box.
         """
-
+        self._tirage.disconnect_search(self)
         self._tirage.search = value
+        self._tirage.connect_search(self)
 
     def notify(self, sender, old):
         """

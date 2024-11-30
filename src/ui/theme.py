@@ -64,14 +64,11 @@ def load_theme(theme: Theme):
     Applique le style du thème actuel à la fenêtre.
     """
     theme_name = "light" if theme == Theme.light else "dark"
-    style_file_path = os.path.join(THEME_DIRECTORY, f"{theme_name}style.qss")
-    apply_style(style_file_path)
-
-
-def apply_style(file_path: str):
-    """
-    Applique le style contenu dans le fichier donné.
-    """
-    with open(file_path, "r") as f:
+    style_file_path = os.path.join(os.path.dirname(__file__), "theme", f"{theme_name}.qss")
+    with open(style_file_path, "r") as f:
         # noinspection PyUnresolvedReferences
         QApplication.instance().setStyleSheet(f.read())
+
+
+
+

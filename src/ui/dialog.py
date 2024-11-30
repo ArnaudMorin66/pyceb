@@ -26,7 +26,7 @@ class QSolutionDialog(QDialog):
         vlayout = QVBoxLayout()
         title = QLabel(str(status), self)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("font-size: 16pt; font-weight: bold; border: 2px solid yellow;")
+        title.setStyleSheet("font-size: 16pt; font-weight: bold; border: 1px solid yellow;")
         vlayout.addWidget(title)
         layout = QGridLayout()
         list_widget = QListWidget(self)

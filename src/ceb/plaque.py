@@ -92,11 +92,17 @@ class CebPlaque(CebBase):
         """
         return self._disabled
 
-    def disable(self, value: bool = True):
+    def enable(self):
+        """
+        Débloque les notifications.
+        """
+        self._disabled = False
+
+    def disable(self):
         """
         Bloque les notifications. ou les débloque
         """
-        self._disabled = value
+        self._disabled = True
 
     def _notify(self, old: int):
         """

@@ -11,7 +11,7 @@ import pickle
 import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
-from typing import List, overload
+from typing import List
 
 from ceb.base import CebBase
 from ceb.notify import IPlaqueNotify
@@ -99,15 +99,19 @@ class CebTirage(IPlaqueNotify):
         for plaque in self._plaques:
             plaque.disconnect(notify_plaque if notify_plaque else self)
 
-    def block_plaques(self, value: bool = True):
+    def disable_plaques(self):
         """
         Bloque les notifications pour toutes les plaques.
-
-        :param value: True pour bloquer les notifications, False pour les débloquer.
         """
         for plaque in self._plaques:
-            plaque.disable(value)
+            plaque.disable()
 
+    def enable_plaques(self):
+        """
+        Débloque les notifications pour toutes les plaques.
+"""
+        for plaque in self._plaques:
+            plaque.enable()
 
     def clear(self) -> CebStatus:
         """
@@ -178,6 +182,18 @@ class CebTirage(IPlaqueNotify):
             return
         self._search.value = value
         self.clear()
+
+    def search_disable(self):
+        """
+        Désactive les notifications pour l'objet de recherche.
+        """
+        self._search.disable()
+
+    def search_enable(self):
+        """
+        Active les notifications pour l'objet de recherche.
+        """
+        self._search.enable()
 
     def random(self) -> CebStatus:
         """

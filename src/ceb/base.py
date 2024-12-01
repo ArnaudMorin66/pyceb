@@ -29,8 +29,6 @@ class CebBase:
         """
         return self._value
 
-
-
     @value.setter
     def value(self, valeur: int):
         """
@@ -47,6 +45,7 @@ class CebBase:
         :param valeur: La nouvelle valeur à définir.
         """
         self._value = valeur
+
     @property
     def rank(self) -> int:
         """

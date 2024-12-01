@@ -11,14 +11,15 @@ import pickle
 import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
-from typing import List
+from typing import List, override
 
 from ceb import IObserverNotify
+from ceb.search import CebSearch
 from ceb.base import CebBase
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.status import CebStatus
-from utils import ObservableObject
+
 
 EXTENSION_METHODS = {
     ".json": "save_to_json",
@@ -47,41 +48,30 @@ class CebTirage(IObserverNotify):
             plaques = []
         self._plaques: List[CebPlaque] = []
 
-        self._search: ObservableObject[int] = ObservableObject(0)
+        self._ceb_search: CebSearch = CebSearch(0)
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
         self._status: CebStatus = CebStatus.Indefini
 
         for _ in range(6):
-            self._plaques.append(CebPlaque(0, self))
+            self._plaques.append(CebPlaque(0))
+        # self.connect_plaques(self)
 
-        self._search.value = search
+        self._ceb_search.value = search
 
         if search and plaques:
             pass
         elif search == 0 and len(plaques) > 0:
-            self._search.value = randint(100, 999)
+            self.cebsearch.value = randint(100, 999)
         else:
             self.random()
         self.clear()
+        self.cebsearch.connect(self)
+        self.connect_plaques()
 
-    def connect_search(self, observer):
-        """
-        Attache un observateur à l'objet de recherche.
 
-        :param observer: L'observateur à attacher.
-        """
-        self._search.connect(observer)
 
-    def disconnect_search(self, observer):
-        """
-        Détache un observateur de l'objet de recherche.
-
-        :param observer: L'observateur à détacher.
-        """
-        self._search.disconnect(observer)
-
-    def connect_plaques(self, plaque_notify: IPlaqueNotify=None):
+    def connect_plaques(self, plaque_notify: IObserverNotify=None):
         """
         Attache un observateur à toutes les plaques.
 
@@ -90,7 +80,7 @@ class CebTirage(IObserverNotify):
         for plaque in self._plaques:
             plaque.connect(plaque_notify if plaque_notify else self)
 
-    def disconnect_plaques(self, notify_plaque: IPlaqueNotify=None):
+    def disconnect_plaques(self, notify_plaque: IObserverNotify=None):
         """
         Détache un observateur de toutes les plaques.
 
@@ -150,68 +140,47 @@ class CebTirage(IObserverNotify):
         return ", ".join(map(str, self.found))
 
     @property
+    def cebsearch(self):
+        """
+        Retourne l'objet ObservableObject associé à la recherche.
+
+        :return: L'objet ObservableObject associé à la recherche.
+        """
+        return self._ceb_search
+
+    @property
     def search(self) -> int:
         """
-        Represents a search property.
+        Retourne la valeur de recherche.
 
-        This property returns the value of the `_search` attribute's `value`.
-
-        @property
-        @return: The integer value of the `_search` attribute.
+        :return: La valeur de recherche.
         """
-        return self._search.value
+        return self._ceb_search.value
 
     @search.setter
     def search(self, value: int):
         """
-        Set the search value and clear the results if the value changes.
+        Définit la valeur de recherche.
 
-        Setter for the search attribute, which updates the value and clears any
-        existing results if the new value differs from the current one.
-
-        Args:
-            value (int): The new search value.
-
-        Raises:
-            None
-
-        Returns:
-            None
+        :param value: La nouvelle valeur de recherche.
         """
-        if value == self._search.value:
-            return
-        self._search.value = value
-        self.clear()
-
-    def search_disable(self):
-        """
-        Désactive les notifications pour l'objet de recherche.
-        """
-        self._search.disable()
-
-    def search_enable(self):
-        """
-        Active les notifications pour l'objet de recherche.
-        """
-        self._search.enable()
+        self._ceb_search.value = value
 
     def random(self) -> CebStatus:
         """
         Génère un tirage aléatoire de plaques et une valeur de recherche.
 
-        Cette méthode initialise la valeur de recherche à un nombre aléatoire entre 100 et 999,
-        puis sélectionne aléatoirement 6 plaques de la liste `LISTEPLAQUES`.
-
-        :return: Le statut actuel de l'objet CebTirage après réinitialisation.
         """
         self.disconnect_plaques()
+        self.cebsearch.disconnect(self)
         self.search = randint(100, 999)
+
         liste_plaques = LISTEPLAQUES[:]
         for plaque in self._plaques:
             index = randint(0, len(liste_plaques) - 1)
-            plaque.value = liste_plaques[index]
-            liste_plaques.pop(index)
-        self.connect_plaques()
+            plaque.value = liste_plaques.pop(index)
+        self.cebsearch.connect(self)
+        self.connect_plaques(self)
         return self.clear()
 
     @property
@@ -318,7 +287,7 @@ class CebTirage(IObserverNotify):
 
         :return: Le statut actuel de l'objet CebTirage, soit `CebStatus.Valide` soit `CebStatus.Invalide`.
         """
-        self._status = CebStatus.Valide if 100 <= self._search.value <= 999 and len(
+        self._status = CebStatus.Valide if 100 <= self._ceb_search.value <= 999 and len(
             self._plaques) == 6 else CebStatus.Invalide
         if self._status == CebStatus.Valide:
             for plaque in self._plaques:
@@ -327,6 +296,7 @@ class CebTirage(IObserverNotify):
                     break
         return self._status
 
+    @override
     def observer_notify(self, sender,  old):
         self.clear()
 
@@ -347,7 +317,7 @@ class CebTirage(IObserverNotify):
         :param sol: L'opération à ajouter aux solutions.
         :return: Rien.
         """
-        diff: int = abs(sol.value - self._search.value)
+        diff: int = abs(sol.value - self._ceb_search.value)
         if diff > self._diff:
             return
         if diff != self._diff:
@@ -381,7 +351,7 @@ class CebTirage(IObserverNotify):
         :param search: Valeur entière à rechercher.
         :return: Le statut actuel de l'objet CebTirage.
         """
-        self._search.value = search
+        self._ceb_search.value = search
         self.plaques = plaques
         return self.solve()
 
@@ -444,7 +414,7 @@ class CebTirage(IObserverNotify):
         """
         return {
             "plaques": [k.value for k in self.plaques],
-            "search": self.search,
+            "search": self.cebsearch,
             "status": str(self.status),
             "found": self.found,
             "ecart": self.ecart,
@@ -483,7 +453,7 @@ class CebTirage(IObserverNotify):
         plaques_element = XML.SubElement(root, "plaques")
         for plaque in self.plaques:
             XML.SubElement(plaques_element, "plaque").text = str(plaque)
-        XML.SubElement(root, "search").text = str(self.search)
+        XML.SubElement(root, "search").text = str(self.cebsearch)
         XML.SubElement(root, "status").text = str(self.status)
         XML.SubElement(root, "found").text = str(self.found)
         XML.SubElement(root, "ecart").text = str(self.ecart)
@@ -521,7 +491,7 @@ class CebTirage(IObserverNotify):
             writer.writerow(["Plaques", "Search", "Status", "Found", "Ecart", "Count", "Solutions"])
             writer.writerow([
                 ",".join(map(str, [k.value for k in self.plaques])),
-                self.search,
+                self.cebsearch,
                 str(self.status),
                 ",".join(map(str, self.found)),
                 self.ecart,
@@ -575,7 +545,7 @@ if __name__ == "__main__":
     """
     t = CebTirage()
     t.solve()
-    print(f"search: {t.search}")
+    print(f"search: {t.cebsearch}")
     print("plaques : ")
     for p in t.plaques:
         print(f"\t{p.value}")

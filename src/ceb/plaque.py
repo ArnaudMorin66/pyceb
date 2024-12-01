@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import List, override
 
 from utils import ObservableBase
+from . import IObserverNotify
 from .base import CebBase
 
 #: Liste des plaques disponibles
@@ -44,12 +45,12 @@ PLAQUESUNIQUES = sorted(set(LISTEPLAQUES))
 STRPLAQUESUNIQUES = [str(x) for x in PLAQUESUNIQUES]
 
 
-class CebPlaque(CebBase, ObservableBase):
-    """
-        classe définissant une plaque du jeu 
-    """
-    def __init__(self, v: int = 0, obs: IPlaqueNotify = None):
+class CebPlaque( CebBase, ObservableBase):
+    """classe définissant une plaque du jeu"""
+
+    def __init__(self, v: int = 0, obs: IObserverNotify = None):
         super().__init__()
+        ObservableBase.__init__(self) # Obligatoire pour intialiser l'observateur
         self._value = v
         if obs:
             self._observers = [obs]

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import Enum
+from enum import Enum, auto
 
 
 class CebStatus(Enum):
@@ -8,22 +8,22 @@ class CebStatus(Enum):
     Enumération des statuts du compte.
     """
 
-    Indefini = 0
+    Indefini = auto()
     """Le statut du compte est indéfini."""
 
-    Valide = 1
+    Valide = auto()
     """Le compte est valide."""
 
-    EnCours = 2
+    EnCours = auto()
     """Le compte est en cours de validation."""
 
-    CompteEstBon = 3
+    CompteEstBon = auto()
     """Le compte est bon."""
 
-    CompteApproche = 4
+    CompteApproche = auto()
     """Le compte approche de la validation."""
 
-    Invalide = 5
+    Invalide = auto()
     """Le compte est invalide."""
 
     def __str__(self) -> str:

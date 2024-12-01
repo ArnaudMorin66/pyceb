@@ -85,7 +85,7 @@ class PyCeb:
             self.console.print(self.tirage.json, style="bold green")
         else:
             self.console.print("#### Tirage du compte est bon ####", style="bold blue")
-            self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.search}",
+            self.console.print(f"Tirage: {', '.join(map(str, self.tirage.plaques))}\tRecherche: {self.tirage.cebsearch}",
                                style="bold yellow")
 
             ellapsed, status = self.solve_tirage()

@@ -119,10 +119,23 @@ class MetaSingleton(type):
 
 
 class ObservableBase:
-    _observers: List[IObserverNotify] = []
-    _enabled: bool = True
+    """
+    Maintains a list of observers and provides methods to notify them upon changes.
 
-    def connect(self, observer):
+    This class serves as a base implementation of the Observer pattern, allowing
+    the management of observers that should be notified of certain events or changes
+    in state. It provides basic functionalities to connect, disconnect, and manage
+    the notification status, as well as an internal method to notify all observers
+    if certain conditions are met.
+    """
+    def __init__(self):
+        """
+        Initializes a new instance of the ObservableBase class.
+        """
+        self._observers = []
+        self._enabled = True
+
+    def connect(self, observer: IObserverNotify):
         """
         Ajoute un observateur à la liste des observateurs.
 
@@ -131,7 +144,7 @@ class ObservableBase:
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def disconnect(self, observer):
+    def disconnect(self, observer: IObserverNotify):
         """
         Supprime un observateur de la liste des observateurs.
 
@@ -165,6 +178,23 @@ class ObservableBase:
         Désactive les notifications.
         """
         self._enabled = False
+
+    def is_connect(self, observer: IObserverNotify):
+        """
+        Indique si l'observateur est connecté.
+
+        :param observer: L'observateur à vérifier.
+        :return: True si l'observateur est connecté, False sinon.
+        """
+        return observer in self._observers
+
+    def has_connect(self):
+        """
+        Indique si des observateurs sont connectés.
+
+        :return: True si des observateurs sont connectés, False sinon.
+        """
+        return len(self._observers) > 0
         
     def _notify(self, sender, old):
         """
@@ -186,7 +216,7 @@ class ObservableObject[T](ObservableBase):
         Initialise un nouvel objet ObservableSearch.
 
         """
-
+        super().__init__()
         if value is not None:
             self._value = value
 

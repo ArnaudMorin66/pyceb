@@ -22,7 +22,7 @@ class QSolutionDialog(QDialog):
         super().__init__()
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setModal(True)
-        self.resize(200, 164)
+        self.resize(256, 164)
         vlayout = QVBoxLayout()
         title = QLabel(str(status), self)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)

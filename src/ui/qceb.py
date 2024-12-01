@@ -100,9 +100,9 @@ class QCeb(QWidget):
             ("Thème", "Ctrl+T", self.switch_theme, "theme.png", True),
             ("Sauvegarder", "Ctrl+S", self.save_results_dialog, "save.png", False),
             ("", "", None, "", False),
-            ("Quitter", "Ctrl+Q", self.close, "quitter.png", False),
+            ("A propos", "Ctrl+A", self.about, "apropos.png", False),
             ("", "", None, "", False),
-            ("A propos", "Ctrl+A", self.apropos, "apropos.png", False)
+            ("Quitter", "Ctrl+Q", self.close, "quitter.png", False),
         ]
 
         #: Iterate through the actions and add them to the context menu
@@ -408,7 +408,7 @@ class QCeb(QWidget):
             QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
 
     @Slot()
-    def apropos(self):
+    def about(self):
         """
         Affiche une boîte de dialogue "A propos" avec des informations sur l'application.
 

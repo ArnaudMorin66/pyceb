@@ -4,6 +4,7 @@ from .operation import CebOperation
 from .plaque import CebPlaque, LISTEPLAQUES, PLAQUESUNIQUES, STRPLAQUESUNIQUES
 from .status import CebStatus
 from .tirage import CebTirage, solve
+from .search import CebSearch
 
 __all__ = [
     "CebBase",
@@ -16,4 +17,5 @@ __all__ = [
     "CebTirage",
     "solve",
     "IObserverNotify",
+    "CebSearch",
 ]

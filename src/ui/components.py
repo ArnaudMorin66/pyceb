@@ -1,10 +1,12 @@
+from typing import override
+
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
-from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebTirage, IObserverNotify)
+from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebTirage, IObserverNotify, CebSearch)
 
 
-class QComboboxPlq(QComboBox, IObserverNotify):
+class QComboboxPlq( IObserverNotify, QComboBox):
     """
     A custom QComboBox for handling CebPlaque objects.
     """
@@ -38,6 +40,7 @@ class QComboboxPlq(QComboBox, IObserverNotify):
         self.plaque.value = int(text) if text.isdigit() else 0
         self.plaque.connect(self)
 
+    @override
     def observer_notify(self, plaque: CebPlaque, old: int):
         """
         Slot for handling the notify signal.
@@ -67,7 +70,7 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
         self.setValue(tirage.search)
         self.setAccelerated(True)
         self.valueChanged.connect(self.onvaluechanged)
-        self._tirage.connect_search(self)
+        self._tirage.cebsearch.connect(self)
 
     def onvaluechanged(self, value: int):
         """
@@ -75,11 +78,12 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
 
         :param value: The value of the spin box.
         """
-        self._tirage.disconnect_search(self)
+        self._tirage.cebsearch.disconnect(self)
         self._tirage.search = value
-        self._tirage.connect_search(self)
+        self._tirage.cebsearch.connect(self)
 
-    def observer_notify(self, sender, old):
+    @override
+    def observer_notify(self, sender: CebSearch, old):
         """
         Notification handler for updating the spin box value from the sender.
 

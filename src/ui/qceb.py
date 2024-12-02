@@ -251,15 +251,15 @@ class QCeb(QWidget, IObserverNotify):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
-        layout=QGridLayout()
-        for c in range(5):
+        # layout=QGridLayout()
+        layout = QHBoxLayout()
+        for _ in range(5):
             label = QLabel("")
             label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             label.setMargin(0)
-            
-            label.setStyleSheet("font-size: 10px; font-weight: bold;")
+            label.setStyleSheet("font-size: 16px; font-weight: bold;")
             self.labels_results.append(label)
-            layout.addWidget(label,0, c)
+            layout.addWidget(label) # ,0, c)
 
         self.tirageform_layout.addLayout(layout)
         return self
@@ -285,11 +285,12 @@ class QCeb(QWidget, IObserverNotify):
                     f"Trouvé(s): {self.tirage.str_found}",
                     f"{f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche else ''}",
                     f"Nombre de solutions: {self.tirage.count}",
+                    f"Durée: {self.tirage.duree/1000} s"
                 ]
 
             for ix, result in enumerate(results):
                 self.labels_results[ix].setText(result)
-                self.labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
+                self.labels_results[ix].setStyleSheet(f"font-size: 13px; font-weight: bold;color:{color};")
             self.setWindowTitle(" - ".join(results))
 
     @Slot(QModelIndex, )
@@ -321,19 +322,15 @@ class QCeb(QWidget, IObserverNotify):
     @Slot()
     def solve(self):
         """
-        Résout le tirage actuel et met à jour l'interface utilisateur avec les résultats.
+        Résout le tirage actuel.
 
-        Cette méthode effectue les étapes suivantes :
-        1. Enregistre l'heure de début de la résolution.
-        2. Met à jour les plaques et la valeur de recherche du tirage avec les valeurs actuelles des entrées utilisateur.
-        3. Appelle la méthode `resolve` de l'objet `tirage` pour résoudre le tirage.
-        4. Met à jour le layout des résultats avec la durée de la résolution.
-        5. Met à jour le modèle de données pour refléter les nouvelles solutions.
+        Cette méthode vérifie d'abord l'état du tirage. Si le tirage est en cours, elle ne fait rien.
+        Si le tirage est déjà résolu ou invalide, elle génère un nouveau tirage aléatoire.
+        Sinon, elle appelle la méthode de résolution du tirage, met à jour l'interface utilisateur
+        avec les résultats et affiche la première solution trouvée dans une boîte de dialogue.
 
-        En cas d'exception, affiche un message d'erreur dans une boîte de dialogue.
-
-        Raises:
-            Exception: Si une erreur se produit lors de la résolution du tirage.
+        Returns:
+            None
         """
         match self.tirage.status:
             case CebStatus.EnCours:
@@ -347,8 +344,6 @@ class QCeb(QWidget, IObserverNotify):
 
         self.solutions_table.setFocus()
         if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-             self.labels_results[4].setText(f"Durée: {self.tirage.duree / 1000.0:.3f} s")
-             self.labels_results[4].setStyleSheet(f"font-size: 14px; font-weight: bold;")
              QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
 
     @Slot()
@@ -370,7 +365,14 @@ class QCeb(QWidget, IObserverNotify):
         """
         QThemeManager().switch_theme()
 
-    def observer_notify(self, sender, status):
+    """
+    Notifie l'observateur des changements de statut.
+    
+    Args:
+        sender: L'objet qui envoie la notification.
+        status: Le nouveau statut à notifier.
+    """
+    def observer_notify(self, sender, param):
         self.update_data()
 
 

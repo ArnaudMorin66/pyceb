@@ -2,43 +2,50 @@ from PySide6.QtCore import QElapsedTimer, Qt
 from PySide6.QtWidgets import QApplication
 
 from ceb import CebTirage, CebStatus
+from utils import ObservableBase
 
 
-class QTirage(CebTirage):
+class QTirage(CebTirage, ObservableBase):
     """
-    Represents an extended version of CebTirage with timing abilities.
+    Represents a specialized drawable object in a user interface, inheriting
+    behaviors from CebTirage and ObservableBase.
 
-    This class is derived from CebTirage and adds functionality to keep
-    track of the duration of solve operations. It uses Qt's timing mechanisms
-    to measure the time taken for computation and provides an interface
-    to retrieve the elapsed time in milliseconds. This class is particularly
-    useful for applications where performance measurement is necessary for
-    solve operations.
+    The QTirage class encapsulates drawing operations and status handling
+    within a graphical application. It extends CebTirage functionality by
+    adding observable pattern support through ObservableBase. This class
+    also manages a duration attribute that records the time taken by
+    certain operations, typically used for performance monitoring. The
+    class provides methods for solving a problem and clearing the state,
+    with notifications sent to observers when these operations occur.
+
+    Attributes:
+        _duree: An integer representing the duration of an operation.
+
+    Parameters:
+        parent: Optional; The parent widget, if any, to which this object belongs.
     """
     _duree = 0
 
     def __init__(self, parent=None):
-        """
-        Initialize the QTirage instance.
-
-        :param parent: The parent widget, if any.
-        """
         super().__init__(parent)
+        ObservableBase.__init__(self)
 
     @property
     def duree(self):
-        """
-        Get the duration of the last solve operation.
-
-        :return: The duration in milliseconds.
-        """
         return self._duree
 
     def solve(self) -> CebStatus:
         """
-        Solve the given plaques and measure the time taken.
+        Executes the 'solve' method, measures its execution time, and notifies observers
+        of the status.
 
-        :return: The status of the solve operation.
+        The method overrides the cursor to indicate a busy state, measures the duration
+        it takes to execute the 'solve' method from the superclass, restores the cursor
+        once finished, and notifies observers of the computation status. The duration
+        is stored in the '_duree' attribute for later reference.
+
+        Returns:
+            CebStatus: The status result from the 'solve' method execution.
         """
         self._duree = 0
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -47,11 +54,24 @@ class QTirage(CebTirage):
         status = super().solve()
         self._duree = timer.elapsed()
         QApplication.restoreOverrideCursor()
+        self._notify(self, status)
         return status
 
-    def clear(self):
+    def clear(self) -> CebStatus:
         """
-        Clear the current state and reset the duration.
+        Clears the current state of the object by resetting attributes and notifying changes.
+
+        This method overrides the clear method from the superclass. Upon execution, it resets
+        the _duree attribute to zero and then calls the _notify method to signal any changes
+        in the object’s state using the result from the superclass clear method.
+
+        Returns
+        -------
+        Any
+            The result of the superclass clear method, which indicates the status after clearing.
+
         """
-        super().clear()
+        status = super().clear()
         self._duree = 0
+        self._notify(self, status)
+        return status

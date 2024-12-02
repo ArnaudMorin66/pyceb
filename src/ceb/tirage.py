@@ -18,7 +18,7 @@ from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.search import CebSearch
 from ceb.status import CebStatus
-from utils import IObserverNotify, ObservableBase
+from utils import IObserverNotify
 
 EXTENSION_METHODS = {
     ".json": "save_to_json",
@@ -30,7 +30,7 @@ EXTENSION_METHODS = {
 OPERATIONS = ["x", "+", "-", "/"]
 
 
-class CebTirage(IObserverNotify, ObservableBase):
+class CebTirage(IObserverNotify):
     """
     Tirage Plaques et Recherche
     """
@@ -44,7 +44,6 @@ class CebTirage(IObserverNotify, ObservableBase):
             :param search: Valeur entière à rechercher.
             """
         super().__init__()
-        ObservableBase.__init__(self)
         self._plaques: List[CebPlaque] = []
         self._ceb_search: CebSearch = CebSearch(0)
         self._solutions: List[CebBase] = []
@@ -108,7 +107,6 @@ class CebTirage(IObserverNotify, ObservableBase):
         self._solutions = []
         self._diff = maxsize
         self.valid()
-        self._notify(self, self.status)
         return self.status
 
     @property
@@ -345,7 +343,6 @@ class CebTirage(IObserverNotify, ObservableBase):
         self._solutions.sort(key=lambda sol: sol.rank)
         self.status = CebStatus.CompteEstBon \
             if self._solutions[0].value == self.search else CebStatus.CompteApproche
-        self._notify(self, self.status)
         return self._status
 
     def solve_with_param(

@@ -203,13 +203,13 @@ class ObservableBase:
         """
         return len(self._observers) > 0
 
-    def _notify(self, sender, old):
+    def _notify(self, sender, param):
         """
         Notifie tous les observateurs du changement de valeur.
         """
         if self._enabled:
             for observer in self._observers:
-                observer.observer_notify(sender, old)
+                observer.observer_notify(sender, param)
 
 
 class ObservableObject[T](ObservableBase):

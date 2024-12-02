@@ -30,7 +30,6 @@ class QSolutionsView(QTableView):
         self.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
 
-
     def refresh(self):
         """
         Refresh the view by emitting the layoutChanged signal.

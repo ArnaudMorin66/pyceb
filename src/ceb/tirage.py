@@ -13,13 +13,12 @@ from random import randint
 from sys import maxsize
 from typing import List, override
 
-from ceb import IObserverNotify
-from ceb.search import CebSearch
 from ceb.base import CebBase
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
+from ceb.search import CebSearch
 from ceb.status import CebStatus
-
+from utils import IObserverNotify, ObservableBase
 
 EXTENSION_METHODS = {
     ".json": "save_to_json",
@@ -30,13 +29,14 @@ EXTENSION_METHODS = {
 
 OPERATIONS = ["x", "+", "-", "/"]
 
-class CebTirage(IObserverNotify):
+
+class CebTirage(IObserverNotify, ObservableBase):
     """
     Tirage Plaques et Recherche
     """
 
     def __init__(
-            self, plaques=None, search: int = 0) -> None:
+            self, plaques:List[int] | None= None, search: int = 0) -> None:
         """
             Initialise une instance de CebTirage.
 
@@ -44,10 +44,8 @@ class CebTirage(IObserverNotify):
             :param search: Valeur entière à rechercher.
             """
         super().__init__()
-        if plaques is None:
-            plaques = []
+        ObservableBase.__init__(self)
         self._plaques: List[CebPlaque] = []
-
         self._ceb_search: CebSearch = CebSearch(0)
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
@@ -55,23 +53,18 @@ class CebTirage(IObserverNotify):
 
         for _ in range(6):
             self._plaques.append(CebPlaque(0))
-        # self.connect_plaques(self)
-
         self._ceb_search.value = search
-
-        if search and plaques:
-            pass
-        elif search == 0 and len(plaques) > 0:
-            self.cebsearch.value = randint(100, 999)
+        if plaques and search:
+            for index, value in enumerate(plaques[:6]):
+                self._plaques[index].value = value
+            self.search = search
         else:
             self.random()
         self.clear()
         self.cebsearch.connect(self)
         self.connect_plaques()
 
-
-
-    def connect_plaques(self, plaque_notify: IObserverNotify=None):
+    def connect_plaques(self, plaque_notify: IObserverNotify = None):
         """
         Attache un observateur à toutes les plaques.
 
@@ -80,7 +73,7 @@ class CebTirage(IObserverNotify):
         for plaque in self._plaques:
             plaque.connect(plaque_notify if plaque_notify else self)
 
-    def disconnect_plaques(self, notify_plaque: IObserverNotify=None):
+    def disconnect_plaques(self, notify_plaque: IObserverNotify = None):
         """
         Détache un observateur de toutes les plaques.
 
@@ -115,6 +108,7 @@ class CebTirage(IObserverNotify):
         self._solutions = []
         self._diff = maxsize
         self.valid()
+        self._notify(self, self.status)
         return self.status
 
     @property
@@ -273,8 +267,10 @@ class CebTirage(IObserverNotify):
             plq (List[int]): A list of integers representing the new values for the
             plaques attribute.
         """
+        self.disconnect_plaques()
         for index, value in enumerate(plq[:6]):
             self._plaques[index].value = value
+        self.connect_plaques(self)
         self.clear()
 
     def valid(self) -> CebStatus:
@@ -297,7 +293,16 @@ class CebTirage(IObserverNotify):
         return self._status
 
     @override
-    def observer_notify(self, sender,  old):
+    def observer_notify(self, sender, old):
+        """
+        Méthode appelée pour notifier l'observateur d'un changement d'état.
+
+        Cette méthode est appelée lorsque l'objet observé change d'état. Elle réinitialise
+        l'état de l'objet `CebTirage` en appelant la méthode `clear`.
+
+        :param sender: L'objet qui envoie la notification.
+        :param old: L'ancienne valeur ou état avant le changement.
+        """
         self.clear()
 
     @property
@@ -336,14 +341,15 @@ class CebTirage(IObserverNotify):
             return self._status
 
         self._status = CebStatus.EnCours
-        self.solve_stack(self.plaques[:])
+        self._solve()
         self._solutions.sort(key=lambda sol: sol.rank)
         self.status = CebStatus.CompteEstBon \
             if self._solutions[0].value == self.search else CebStatus.CompteApproche
+        self._notify(self, self.status)
         return self._status
 
     def solve_with_param(
-            self, plaques: List[int | CebPlaque] , search: int ) -> CebStatus:
+            self, plaques: List[int | CebPlaque], search: int) -> CebStatus:
         """
         Résout le problème en utilisant les plaques et la valeur de recherche fournies.
 
@@ -355,7 +361,6 @@ class CebTirage(IObserverNotify):
         self.plaques = plaques
         return self.solve()
 
-
     async def solve_async(self) -> CebStatus:
         """
         Résout le problème de manière asynchrone.
@@ -366,11 +371,9 @@ class CebTirage(IObserverNotify):
         """
         return await asyncio.to_thread(self.solve)
 
-    def solve_stack(self, plaques: List[CebBase]) -> None:
+    def _solve(self) -> None:
         """
         Résout le problème en utilisant une pile pour explorer toutes les combinaisons possibles de plaques et d'opérations.
-
-        :param plaques: Liste de plaques à utiliser pour la résolution.
         """
 
         def next_list(current_list: List[CebBase], ceb_operation: CebOperation, ii: int, jj: int) -> List[CebBase]:
@@ -385,8 +388,7 @@ class CebTirage(IObserverNotify):
             """
             return [x for k, x in enumerate(current_list) if k not in (ii, jj)] + [ceb_operation]
 
-        stack = [plaques]
-
+        stack = [self.plaques]
         while stack:
             current_liste = stack.pop()
             for ix, plq in enumerate(current_liste):
@@ -414,7 +416,7 @@ class CebTirage(IObserverNotify):
         """
         return {
             "plaques": [k.value for k in self.plaques],
-            "search": self.cebsearch,
+            "search": self.search,
             "status": str(self.status),
             "found": self.found,
             "ecart": self.ecart,
@@ -545,7 +547,7 @@ if __name__ == "__main__":
     """
     t = CebTirage()
     t.solve()
-    print(f"search: {t.cebsearch}")
+    print(f"search: {t.search}")
     print("plaques : ")
     for p in t.plaques:
         print(f"\t{p.value}")

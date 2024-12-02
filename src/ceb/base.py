@@ -3,6 +3,8 @@ from __future__ import annotations
 
 from typing import List
 
+from utils import ObservableBase
+
 
 class CebBase:
     """
@@ -17,6 +19,7 @@ class CebBase:
         Initialise une nouvelle instance de CebBase avec une valeur par défaut de 0
         et une liste vide d'opérations.
         """
+        super().__init__()
         self._value = 0
         self._operations = []
 

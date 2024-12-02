@@ -9,20 +9,19 @@ from typing import List, Self
 from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QIcon, QAction, QKeySequence, QCursor
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
-                               QHBoxLayout, QComboBox, QSpinBox, QLayout,
+                               QHBoxLayout, QSpinBox, QLayout,
                                QGridLayout, QLabel, QMenu,
                                QFileDialog, QSystemTrayIcon)
 
 import ui.qceb_rcc  # noqa: F401
 from ceb import CebStatus
-from ui import (QComboboxPlq, QSpinBoxSearch,
-                QSolutionDialog, QSolutionsView,
-                QThemeManager, Theme, QTirage)
-from utils import singleton
+from ui import QTirage, QSolutionsView, QComboboxPlq, QSpinBoxSearch, QSolutionDialog, QThemeManager, Theme
+
+from utils import singleton, IObserverNotify
 
 
 @singleton
-class QCeb(QWidget):
+class QCeb(QWidget, IObserverNotify):
     """
     Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
     """
@@ -30,7 +29,7 @@ class QCeb(QWidget):
 
     tirage: QTirage  #:  Instance de CebTirage pour gérer le tirage actuel.
 
-    plaques_inputs: List[QComboBox] = []  #: Liste des QComboBox pour les plaques.
+    plaques_inputs: List[QComboboxPlq] = []  #: Liste des QComboBox pour les plaques.
 
     labels_results: List[QLabel] = []  #: Liste des QLabel pour afficher les résultats.
 
@@ -42,28 +41,6 @@ class QCeb(QWidget):
 
     _tray_icon: QSystemTrayIcon  #: Icône de la barre d'état.
 
-    # noinspection PyUnresolvedReferences
-    # def __new__(cls, *args, **kwargs):
-    #
-    #     """Méthode spéciale pour créer une instance unique de la classe QCeb (singleton).
-    #
-    #     Cette méthode surcharge la méthode __new__ pour implémenter le patron de conception Singleton.
-    #     Elle vérifie si une instance de la classe existe déjà. Si ce n'est pas le cas, elle crée une nouvelle instance
-    #     à l'aide de la méthode __new__ de la superclasse et la stocke dans l'attribut de classe _instance.
-    #     Dans tous les cas, elle retourne l'instance unique stockée dans _instance.
-    #
-    #     Args:
-    #         klass: La classe pour laquelle une nouvelle instance doit être créée.
-    #         *args: Arguments positionnels passés à la méthode __new__ de la superclasse.
-    #         **kwargs: Arguments nommés passés à la méthode __new__ de la superclasse.
-    #
-    #     Returns:
-    #         L'instance unique de la classe QCeb.
-    #     """
-    #     if cls._instance is None:
-    #         cls._instance = super(QCeb, cls).__new__(cls, *args, **kwargs)
-    #     return cls._instance
-
     def __init__(self):
         """
         Initialise l'interface principale du jeu "Jeux du Compte est bon".
@@ -73,7 +50,7 @@ class QCeb(QWidget):
         """
         super().__init__()
         self.tirage = QTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
-
+        self.tirage.connect(self)
         self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
         self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
         self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
@@ -229,7 +206,6 @@ class QCeb(QWidget):
 
         for plq in self.tirage.plaques:
             combo_box = QComboboxPlq(plq)
-            combo_box.currentTextChanged.connect(self.update_data)
             layout.addWidget(combo_box)
             self.plaques_inputs.append(combo_box)
 
@@ -248,7 +224,6 @@ class QCeb(QWidget):
             QLayout: Le layout mis à jour avec le QSpinBox ajouté.
         """
         search_input = QSpinBoxSearch(self.tirage)
-        search_input.valueChanged.connect(self.update_data)
         layout.addWidget(search_input)
         self.search_input = search_input
         return layout
@@ -276,52 +251,46 @@ class QCeb(QWidget):
         Returns:
             Self: L'instance actuelle de `CebMainTirage`.
         """
-        layout = QGridLayout()
-        for ligne in range(2):
-            for colonne in range(3):
-                label = QLabel("")
-                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                label.setStyleSheet("font-size: 14px; font-weight: bold;")
-                self.labels_results.append(label)
-                layout.addWidget(label, ligne, colonne)
+        layout=QGridLayout()
+        for c in range(5):
+            label = QLabel("")
+            label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            label.setMargin(0)
+            
+            label.setStyleSheet("font-size: 10px; font-weight: bold;")
+            self.labels_results.append(label)
+            layout.addWidget(label,0, c)
+
         self.tirageform_layout.addLayout(layout)
         return self
 
-    def clear_result_layout(self):
+    @Slot()
+    def update_data(self):
         """
-           Efface le texte de tous les labels dans le layout des résultats.
-
-           Cette méthode parcourt tous les labels stockés dans l'attribut `_labels_results`
-           et réinitialise leur texte à une chaîne vide.
-           """
+        Met à jour le layout des résultats avec les informations du tirage actuel.
+²       """
         for label in self.labels_results:
             label.clear()
         self.setWindowTitle("Jeux du Compte est bon")
+        self.solutions_table.refresh()
+        if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche, CebStatus.Invalide]:
+            color = {
+                CebStatus.CompteEstBon: "green",
+                CebStatus.CompteApproche: "saddlebrown",
+                CebStatus.Invalide: "red"
+            }.get(self.tirage.status, "black")
+            results = [f"{str(self.tirage.status)}"]
+            if self.tirage.status != CebStatus.Invalide:
+                results += [
+                    f"Trouvé(s): {self.tirage.str_found}",
+                    f"{f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche else ''}",
+                    f"Nombre de solutions: {self.tirage.count}",
+                ]
 
-    def set_result_layout(self):
-        """
-        Met à jour le layout des résultats avec les informations du tirage actuel.
-
-
-        """
-        color = {
-            CebStatus.CompteEstBon: "green",
-            CebStatus.CompteApproche: "saddlebrown",
-            CebStatus.Invalide: "red"
-        }.get(self.tirage.status, "black")
-        results = [f"{str(self.tirage.status)}"]
-        if self.tirage.status != CebStatus.Invalide:
-            results += [
-                f"Trouvé(s): {self.tirage.str_found}",
-                f"{f'Ecart: {self.tirage.ecart}' if self.tirage.status == CebStatus.CompteApproche else ''}",
-                f"Nombre de solutions: {self.tirage.count}",
-                f"Durée: {self.tirage.duree / 1000.0:.3f} s"
-            ]
-
-        for ix, result in enumerate(results):
-            self.labels_results[ix].setText(result)
-            self.labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
-        self.setWindowTitle(" - ".join(results))
+            for ix, result in enumerate(results):
+                self.labels_results[ix].setText(result)
+                self.labels_results[ix].setStyleSheet(f"font-size: 14px; color:{color}; font-weight: bold;")
+            self.setWindowTitle(" - ".join(results))
 
     @Slot(QModelIndex, )
     def selection_changed(self, current: QModelIndex, _):
@@ -347,33 +316,7 @@ class QCeb(QWidget):
         générées. Enfin, elle appelle la méthode `clear` pour réinitialiser l'état de l'interface utilisateur.
         """
         self.tirage.random()
-        self.clear()
 
-    # noinspection PyUnresolvedReferences
-    @Slot()
-    def update_data(self):
-        """
-        Met à jour la valeur d'une plaque spécifique en fonction de l'entrée utilisateur.
-
-        Cette méthode est appelée lorsque le texte actuel d'une QComboBox change.
-        Elle met à jour la valeur de la plaque correspondante dans l'objet `tirage`,
-        réinitialise l'interface utilisateur et met à jour le layout des résultats si le statut du tirage est `Invalide`.
-        """
-        self.clear()
-        if self.tirage.status == CebStatus.Invalide:
-            self.set_result_layout()
-
-    @Slot()
-    def clear(self) -> None:
-        """
-        Réinitialise l'état du tirage et met à jour l'interface utilisateur.
-
-        Cette méthode appelle la méthode `clear` de l'objet `tirage` pour réinitialiser l'état du tirage.
-        Elle met ensuite à jour le modèle de données et efface le texte des labels de résultats.
-        """
-        # noinspection PyUnresolvedReferences
-        self.solutions_table.refresh()
-        self.clear_result_layout()
 
     @Slot()
     def solve(self):
@@ -400,12 +343,13 @@ class QCeb(QWidget):
                 return
 
         self.tirage.solve()  # Appelle la méthode de résolution
-        self.set_result_layout()
-        # noinspection PyUnresolvedReferences
-        self.solutions_table.refresh()
+        # # noinspection PyUnresolvedReferences
+
         self.solutions_table.setFocus()
         if self.tirage.status in [CebStatus.CompteEstBon, CebStatus.CompteApproche]:
-            QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
+             self.labels_results[4].setText(f"Durée: {self.tirage.duree / 1000.0:.3f} s")
+             self.labels_results[4].setStyleSheet(f"font-size: 14px; font-weight: bold;")
+             QSolutionDialog(self.tirage.solutions[0], self.tirage.status).exec()
 
     @Slot()
     def about(self):
@@ -425,6 +369,9 @@ class QCeb(QWidget):
         Bascule entre les thèmes clair et sombre.
         """
         QThemeManager().switch_theme()
+
+    def observer_notify(self, sender, status):
+        self.update_data()
 
 
 def qceb_exec():

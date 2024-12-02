@@ -60,3 +60,5 @@ class CebOperation(CebBase):
             if isinstance(d, CebOperation):
                 self.operations.extend(d.operations)
             self._operations.append(f"{g._value} {op} {d._value} = {self._value}")
+
+

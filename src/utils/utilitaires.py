@@ -2,9 +2,8 @@ import argparse
 import time
 from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from functools import wraps
-from typing import Callable, List
+from typing import Callable
 
-from ceb import IObserverNotify
 
 
 def singleton(class_):
@@ -118,6 +117,13 @@ class MetaSingleton(type):
         return cls._instances[cls]
 
 
+class IObserverNotify:
+    """
+    Interface for ObserverNotify.
+    """
+    def observer_notify(self, sender, param):
+        pass
+
 class ObservableBase:
     """
     Maintains a list of observers and provides methods to notify them upon changes.
@@ -128,6 +134,7 @@ class ObservableBase:
     the notification status, as well as an internal method to notify all observers
     if certain conditions are met.
     """
+
     def __init__(self):
         """
         Initializes a new instance of the ObservableBase class.
@@ -195,7 +202,7 @@ class ObservableBase:
         :return: True si des observateurs sont connectés, False sinon.
         """
         return len(self._observers) > 0
-        
+
     def _notify(self, sender, old):
         """
         Notifie tous les observateurs du changement de valeur.
@@ -249,5 +256,3 @@ class ObservableObject[T](ObservableBase):
         :return: La valeur actuelle sous forme de chaîne de caractères.
         """
         return str(self._value)
-
-

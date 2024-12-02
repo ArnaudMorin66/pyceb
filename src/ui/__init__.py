@@ -1,11 +1,11 @@
 # ui/__init__.py
-
-from .components import QComboboxPlq, QSpinBoxSearch
-from .dialog import QSolutionDialog
+from .qtirage import QTirage
 from .solutionview import QSolutionsView
 from .theme import QThemeManager, Theme
-from .qtirage import QTirage
+from .components import QComboboxPlq, QSpinBoxSearch
+from .dialog import QSolutionDialog
 from .qceb import qceb_exec
+
 
 __all__ = [
     "QComboboxPlq",

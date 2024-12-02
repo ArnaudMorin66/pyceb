@@ -3,10 +3,11 @@ from typing import override
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
-from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebTirage, IObserverNotify, CebSearch)
+from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebTirage, CebSearch)
+from utils import IObserverNotify
 
 
-class QComboboxPlq( IObserverNotify, QComboBox):
+class QComboboxPlq(QComboBox, IObserverNotify):
     """
     A custom QComboBox for handling CebPlaque objects.
     """
@@ -68,7 +69,7 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
         self.setRange(100, 999)
         self._tirage = tirage
         self.setValue(tirage.search)
-        self.setAccelerated(True)
+
         self.valueChanged.connect(self.onvaluechanged)
         self._tirage.cebsearch.connect(self)
 

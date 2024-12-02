@@ -68,7 +68,3 @@ def load_theme(theme: Theme):
     with open(style_file_path, "r") as f:
         # noinspection PyUnresolvedReferences
         QApplication.instance().setStyleSheet(f.read())
-
-
-
-

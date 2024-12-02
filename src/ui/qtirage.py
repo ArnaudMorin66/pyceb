@@ -1,9 +1,7 @@
-from typing import List
-
 from PySide6.QtCore import QElapsedTimer, Qt
 from PySide6.QtWidgets import QApplication
 
-from ceb import CebTirage, CebStatus, CebPlaque
+from ceb import CebTirage, CebStatus
 
 
 class QTirage(CebTirage):
@@ -40,8 +38,6 @@ class QTirage(CebTirage):
         """
         Solve the given plaques and measure the time taken.
 
-        :param plaques: A list of plaques to solve.
-        :param search: The search parameter.
         :return: The status of the solve operation.
         """
         self._duree = 0

@@ -11,14 +11,13 @@ import pickle
 import xml.etree.ElementTree as XML
 from random import randint
 from sys import maxsize
-from typing import List, override
+from typing import List
 
 from ceb.base import CebBase
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
 from ceb.search import CebSearch
 from ceb.status import CebStatus
-from utils import IObserverNotify
 
 EXTENSION_METHODS = {
     ".json": "save_to_json",
@@ -30,7 +29,7 @@ EXTENSION_METHODS = {
 OPERATIONS = ["x", "+", "-", "/"]
 
 
-class CebTirage(IObserverNotify):
+class CebTirage:
     """
     Tirage Plaques et Recherche
     """
@@ -62,17 +61,17 @@ class CebTirage(IObserverNotify):
         self.clear()
         self.connect_all()
 
-    def connect_search(self, observer: IObserverNotify=None):
+    def connect_search(self, observer=None):
         """
         Attache un observateur à la valeur de recherche.
         """
-        self._obs_search.connect(observer if observer else self)
+        self._obs_search.connect(observer if observer else self.data_changed)
 
-    def disconnect_search(self, observer: IObserverNotify=None):
+    def disconnect_search(self, observer=None):
         """
         Détache un observateur de la valeur de recherche.
         """
-        self._obs_search.disconnect(observer if observer else self)
+        self._obs_search.disconnect(observer if observer else self.data_changed)
 
 
     def connect_plaques(self):
@@ -80,14 +79,14 @@ class CebTirage(IObserverNotify):
         Attache un observateur à toutes les plaques.
         """
         for plaque in self._plaques:
-            plaque.connect(self)
+            plaque.connect(self.data_changed)
 
     def disconnect_plaques(self):
         """
         Détache un observateur de toutes les plaques.
         """
         for plaque in self._plaques:
-            plaque.disconnect(self)
+            plaque.disconnect(self.data_changed)
 
     def connect_all(self):
         """
@@ -296,8 +295,7 @@ class CebTirage(IObserverNotify):
                     break
         return self._status
 
-    @override
-    def observer_notify(self, sender, param):
+    def data_changed(self, sender, param):
         """
         Notifies the observer with the provided sender and parameter. This function
         clears the observer's current state before processing the notification, ensuring

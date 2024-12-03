@@ -17,11 +17,11 @@ import ui.qceb_rcc  # noqa: F401
 from ceb import CebStatus
 from ui import QTirage, QSolutionsView, QComboboxPlq, QSpinBoxSearch, QSolutionDialog, QThemeManager, Theme
 
-from utils import singleton, IObserverNotify
+from utils import singleton
 
 
 @singleton
-class QCeb(QWidget, IObserverNotify):
+class QCeb(QWidget):
     """
     Classe principale pour l'interface utilisateur du jeu "Jeux du Compte est bon".
     """
@@ -50,7 +50,7 @@ class QCeb(QWidget, IObserverNotify):
         """
         super().__init__()
         self.tirage = QTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
-        self.tirage.connect(self)
+        self.tirage.signal_solve.connect(self.data_changed)
         self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
         self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
         self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
@@ -372,7 +372,7 @@ class QCeb(QWidget, IObserverNotify):
         sender: L'objet qui envoie la notification.
         status: Le nouveau statut à notifier.
     """
-    def observer_notify(self, sender, param):
+    def data_changed(self, status, duree):
         self.update_data()
 
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import List, override
 
-from utils import ObservableBase, IObserverNotify
+from utils import SignalBase
 
 
 from .base import CebBase
@@ -46,12 +46,12 @@ PLAQUESUNIQUES = sorted(set(LISTEPLAQUES))
 STRPLAQUESUNIQUES = list(map(str, PLAQUESUNIQUES))
 
 
-class CebPlaque(CebBase, ObservableBase):
+class CebPlaque(CebBase, SignalBase):
     """classe définissant une plaque du jeu"""
 
-    def __init__(self, valeur_initiale: int = 0, observateur: IObserverNotify = None):
+    def __init__(self, valeur_initiale: int = 0, observateur= None):
         super().__init__()
-        ObservableBase.__init__(self)
+        SignalBase.__init__(self)
         self._value = valeur_initiale
 
         if observateur:
@@ -81,4 +81,4 @@ class CebPlaque(CebBase, ObservableBase):
         old = self.value
         super().set_value(valeur)
         self.operations[0] = str(valeur)
-        self._notify(self, old)
+        self.emit(self, old)

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import List
 
-from utils import ObservableBase
+from utils import SignalBase
 
 
 class CebBase:

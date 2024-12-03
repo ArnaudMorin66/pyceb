@@ -1,5 +1,5 @@
-from utils import ObservableObject
+from utils import SignalObject
 
 
-class CebSearch(ObservableObject[int]):
+class CebSearch(SignalObject[int]):
     pass

@@ -1,13 +1,10 @@
-from typing import override
-
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
-from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebTirage, CebSearch)
-from utils import IObserverNotify
+from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebSearch)
 
 
-class QComboboxPlq(QComboBox, IObserverNotify):
+class QComboboxPlq(QComboBox):
     """
     A custom QComboBox for handling CebPlaque objects.
     """
@@ -23,7 +20,7 @@ class QComboboxPlq(QComboBox, IObserverNotify):
         super().__init__(parent)
 
         self.plaque = plaque
-        self.plaque.connect(self)
+        self.plaque.connect(self.observer_notify)
 
         self.setDuplicatesEnabled(False)
         self.addItems(STRPLAQUESUNIQUES)
@@ -37,11 +34,11 @@ class QComboboxPlq(QComboBox, IObserverNotify):
 
         :param text: The text of the current item.
         """
-        self.plaque.disconnect(self)
+        self.plaque.disconnect(self.observer_notify)
         self.plaque.value = int(text) if text.isdigit() else 0
-        self.plaque.connect(self)
+        self.plaque.connect(self.observer_notify)
 
-    @override
+
     def observer_notify(self, plaque: CebPlaque, old: int):
         """
         Slot for handling the notify signal.
@@ -53,7 +50,7 @@ class QComboboxPlq(QComboBox, IObserverNotify):
             self.setCurrentText(str(plaque.value))
 
 
-class QSpinBoxSearch(QSpinBox, IObserverNotify):
+class QSpinBoxSearch(QSpinBox):
     """
 
     """
@@ -71,7 +68,7 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
         self.setValue(search.value)
 
         self.valueChanged.connect(self.onvaluechanged)
-        self._search.connect(self)
+        self._search.connect(self.search_changed)
 
     def onvaluechanged(self, value: int):
         """
@@ -79,17 +76,11 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
 
         :param value: The value of the spin box.
         """
-        self._search.disconnect(self)
+        self._search.disconnect(self.search_changed)
         self._search.value = value
-        self._search.connect(self)
+        self._search.connect(self.search_changed)
 
-    @override
-    def observer_notify(self, sender: CebSearch, old):
-        """
-        Notification handler for updating the spin box value from the sender.
+    def search_changed(self, new_value, old_value):
 
-        :param sender: The object sending the notification.
-        :param old: The old value before the update.
-        """
         with QSignalBlocker(self):
-            self.setValue(sender.value)
+            self.setValue(new_value)

@@ -116,112 +116,103 @@ class MetaSingleton(type):
             cls._instances[cls] = super(MetaSingleton, cls).__call__(*args, **kwargs)
         return cls._instances[cls]
 
-
-class IObserverNotify:
+class SignalBase:
     """
-    Interface for ObserverNotify.
-    """
-    def observer_notify(self, sender, param):
-        pass
-
-class ObservableBase:
-    """
-    Maintains a list of observers and provides methods to notify them upon changes.
-
-    This class serves as a base implementation of the Observer pattern, allowing
-    the management of observers that should be notified of certain events or changes
-    in state. It provides basic functionalities to connect, disconnect, and manage
-    the notification status, as well as an internal method to notify all observers
-    if certain conditions are met.
+    Classe de base pour la gestion des signaux et des observateurs.
     """
 
     def __init__(self):
         """
-        Initializes a new instance of the ObservableBase class.
+        Initialise une nouvelle instance de SignalBase.
         """
         self._observers = []
         self._enabled = True
 
-    def connect(self, observer: IObserverNotify):
+    def connect(self, observer):
         """
-        Ajoute un observateur à la liste des observateurs.
+        Connecte un observateur au signal.
 
-        :param observer: L'observateur à ajouter.
+        :param observer: La fonction observatrice à connecter.
         """
         if observer not in self._observers:
             self._observers.append(observer)
 
-    def disconnect(self, observer: IObserverNotify):
+    def disconnect(self, observer):
         """
-        Supprime un observateur de la liste des observateurs.
+        Déconnecte un observateur du signal.
 
-        :param observer: L'observateur à supprimer.
+        :param observer: La fonction observatrice à déconnecter.
         """
         if observer in self._observers:
             self._observers.remove(observer)
 
     def disconnect_all(self):
         """
-        Supprime tous les observateurs de la liste des observateurs.
+        Déconnecte tous les observateurs du signal.
         """
         self._observers.clear()
 
     def is_enabled(self):
         """
-        Indique si les notifications sont désactivées.
+        Vérifie si le signal est activé.
 
-        :return: True si les notifications sont désactivées, False sinon.
+        :return: True si le signal est activé, sinon False.
         """
         return self._enabled
 
     def enable(self):
         """
-        Active les notifications.
+        Active le signal.
         """
         self._enabled = True
 
     def disable(self):
         """
-        Désactive les notifications.
+        Désactive le signal.
         """
         self._enabled = False
 
-    def is_connect(self, observer: IObserverNotify):
+    def is_connect(self, observer):
         """
-        Indique si l'observateur est connecté.
+        Vérifie si un observateur est connecté au signal.
 
-        :param observer: L'observateur à vérifier.
-        :return: True si l'observateur est connecté, False sinon.
+        :param observer: La fonction observatrice à vérifier.
+        :return: True si l'observateur est connecté, sinon False.
         """
         return observer in self._observers
 
     def has_connect(self):
         """
-        Indique si des observateurs sont connectés.
+        Vérifie s'il y a des observateurs connectés au signal.
 
-        :return: True si des observateurs sont connectés, False sinon.
+        :return: True s'il y a des observateurs connectés, sinon False.
         """
         return len(self._observers) > 0
 
-    def _notify(self, sender, param):
+    def emit(self, *args, **kwargs):
         """
-        Notifie tous les observateurs du changement de valeur.
+        Émet le signal à tous les observateurs connectés.
+
+        :param args: Arguments positionnels à passer aux observateurs.
+        :param kwargs: Arguments nommés à passer aux observateurs.
         """
         if self._enabled:
             for observer in self._observers:
-                observer.observer_notify(sender, param)
+                observer(*args, **kwargs)
 
 
-class ObservableObject[T](ObservableBase):
+class SignalObject[T](SignalBase):
     """
-    Classe ObservableSearch qui permet de suivre les changements de valeur et de notifier les observateurs.
+    Classe SignalObject qui hérite de SignalBase et gère une valeur de type g��nérique T.
+    Émet un signal lorsque la valeur change.
     """
     _value: T
 
     def __init__(self, value: T | None = None):
         """
-        Initialise un nouvel objet ObservableSearch.
+        Initialise une nouvelle instance de SignalObject.
 
+        :param value: La valeur initiale de l'objet, de type T ou None.
         """
         super().__init__()
         if value is not None:
@@ -230,16 +221,16 @@ class ObservableObject[T](ObservableBase):
     @property
     def value(self):
         """
-        Obtient la valeur actuelle de l'objet observable.
+        Obtient la valeur actuelle de l'objet.
 
-        :return: La valeur actuelle.
+        :return: La valeur actuelle de l'objet.
         """
         return self._value
 
     @value.setter
     def value(self, new_value: T):
         """
-        Définit une nouvelle valeur pour l'objet observable et notifie les observateurs si la valeur change.
+        Définit une nouvelle valeur pour l'objet et émet un signal si la valeur change.
 
         :param new_value: La nouvelle valeur à définir.
         """
@@ -247,12 +238,12 @@ class ObservableObject[T](ObservableBase):
             return
         old_value = self._value
         self._value = new_value
-        self._notify(self, old_value)
+        self.emit(new_value, old_value)
 
     def __repr__(self):
         """
-        Représentation en chaîne de caractères de l'objet observable.
+        Retourne une représentation sous forme de chaîne de la valeur de l'objet.
 
-        :return: La valeur actuelle sous forme de chaîne de caractères.
+        :return: La valeur de l'objet sous forme de chaîne.
         """
         return str(self._value)

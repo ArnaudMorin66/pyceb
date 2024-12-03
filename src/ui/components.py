@@ -57,9 +57,9 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
     """
 
     """
-    _tirage: CebTirage = None
+    _search: CebSearch = None
 
-    def __init__(self, tirage, parent=None):
+    def __init__(self, search, parent=None):
         """
         Initialize the QSpinBoxSearch.
 
@@ -67,11 +67,11 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
         """
         super().__init__(parent)
         self.setRange(100, 999)
-        self._tirage = tirage
-        self.setValue(tirage.search)
+        self._search = search
+        self.setValue(search.value)
 
         self.valueChanged.connect(self.onvaluechanged)
-        self._tirage.cebsearch.connect(self)
+        self._search.connect(self)
 
     def onvaluechanged(self, value: int):
         """
@@ -79,9 +79,9 @@ class QSpinBoxSearch(QSpinBox, IObserverNotify):
 
         :param value: The value of the spin box.
         """
-        self._tirage.cebsearch.disconnect(self)
-        self._tirage.search = value
-        self._tirage.cebsearch.connect(self)
+        self._search.disconnect(self)
+        self._search.value = value
+        self._search.connect(self)
 
     @override
     def observer_notify(self, sender: CebSearch, old):

@@ -10,7 +10,7 @@ from PySide6.QtCore import Slot, Qt, QModelIndex
 from PySide6.QtGui import QIcon, QAction, QKeySequence, QCursor
 from PySide6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QPushButton, QMessageBox,
                                QHBoxLayout, QSpinBox, QLayout,
-                               QGridLayout, QLabel, QMenu,
+                               QLabel, QMenu,
                                QFileDialog, QSystemTrayIcon)
 
 import ui.qceb_rcc  # noqa: F401
@@ -223,7 +223,7 @@ class QCeb(QWidget, IObserverNotify):
         Returns:
             QLayout: Le layout mis à jour avec le QSpinBox ajouté.
         """
-        search_input = QSpinBoxSearch(self.tirage)
+        search_input = QSpinBoxSearch(self.tirage.obs_search)
         layout.addWidget(search_input)
         self.search_input = search_input
         return layout

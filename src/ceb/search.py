@@ -1,5 +1,5 @@
-from utils import SignalObject
+from utils import ObjectValue
 
 
-class CebSearch(SignalObject[int]):
+class IntSearch(ObjectValue[int]):
     pass

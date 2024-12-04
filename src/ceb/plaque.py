@@ -5,9 +5,7 @@ from __future__ import annotations
 
 from typing import List, override
 
-from utils import SignalBase
-
-
+from utils import Notification
 from .base import CebBase
 
 #: Liste des plaques disponibles
@@ -46,17 +44,25 @@ PLAQUESUNIQUES = sorted(set(LISTEPLAQUES))
 STRPLAQUESUNIQUES = list(map(str, PLAQUESUNIQUES))
 
 
-class CebPlaque(CebBase, SignalBase):
+class CebPlaque(CebBase):
     """classe définissant une plaque du jeu"""
 
-    def __init__(self, valeur_initiale: int = 0, observateur= None):
+    def __init__(self, valeur_initiale: int = 0, observateur: callable=None):
         super().__init__()
-        SignalBase.__init__(self)
+        self._notification = Notification()
         self._value = valeur_initiale
 
         if observateur:
-            self._observers.append(observateur)
+            self.notification.connect(observateur)
         self.operations.append(str(valeur_initiale))
+
+    # noinspection PyPep8Naming
+    @property
+    def notification(self):
+        """
+        Signal de changement de la plaque
+        """
+        return self._notification
 
     @property
     def is_valid(self) -> int:
@@ -81,4 +87,4 @@ class CebPlaque(CebBase, SignalBase):
         old = self.value
         super().set_value(valeur)
         self.operations[0] = str(valeur)
-        self.emit(self, old)
+        self.notification.emit(self, old)

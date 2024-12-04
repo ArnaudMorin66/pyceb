@@ -1,7 +1,7 @@
 from PySide6.QtCore import QSignalBlocker
 from PySide6.QtWidgets import QComboBox, QSpinBox
 
-from ceb import (CebPlaque, STRPLAQUESUNIQUES, CebSearch)
+from ceb import (CebPlaque, STRPLAQUESUNIQUES, IntSearch)
 
 
 class QComboboxPlq(QComboBox):
@@ -20,7 +20,7 @@ class QComboboxPlq(QComboBox):
         super().__init__(parent)
 
         self.plaque = plaque
-        self.plaque.connect(self.observer_notify)
+        self.plaque.notification.connect(self.valueChanged)
 
         self.setDuplicatesEnabled(False)
         self.addItems(STRPLAQUESUNIQUES)
@@ -34,29 +34,23 @@ class QComboboxPlq(QComboBox):
 
         :param text: The text of the current item.
         """
-        self.plaque.disconnect(self.observer_notify)
+        self.plaque.notification.disconnect(self.valueChanged)
         self.plaque.value = int(text) if text.isdigit() else 0
-        self.plaque.connect(self.observer_notify)
+        self.plaque.notification.connect(self.valueChanged)
 
-
-    def observer_notify(self, plaque: CebPlaque, old: int):
-        """
-        Slot for handling the notify signal.
-
-        :param plaque: The CebPlaque object.
-        :param old: The old value of the plaque.
-        """
+    # noinspection PyPep8Naming
+    def valueChanged(self, sender,  old_value):
         with QSignalBlocker(self):
-            self.setCurrentText(str(plaque.value))
+            self.setCurrentText(str(sender.value))
 
 
 class QSpinBoxSearch(QSpinBox):
     """
 
     """
-    _search: CebSearch = None
+    _search: IntSearch = None
 
-    def __init__(self, search, parent=None):
+    def __init__(self, search_value: IntSearch, parent=None):
         """
         Initialize the QSpinBoxSearch.
 
@@ -64,11 +58,11 @@ class QSpinBoxSearch(QSpinBox):
         """
         super().__init__(parent)
         self.setRange(100, 999)
-        self._search = search
-        self.setValue(search.value)
+        self._search = search_value
+        self.setValue(search_value.value)
 
         self.valueChanged.connect(self.onvaluechanged)
-        self._search.connect(self.search_changed)
+        self._search.notification.connect(self.onsearchchanged)
 
     def onvaluechanged(self, value: int):
         """
@@ -76,11 +70,10 @@ class QSpinBoxSearch(QSpinBox):
 
         :param value: The value of the spin box.
         """
-        self._search.disconnect(self.search_changed)
+        self._search.notification.disconnect(self.onsearchchanged)
         self._search.value = value
-        self._search.connect(self.search_changed)
+        self._search.notification.connect(self.onsearchchanged)
 
-    def search_changed(self, new_value, old_value):
-
+    def onsearchchanged(self, sender, old_value):
         with QSignalBlocker(self):
-            self.setValue(new_value)
+            self.setValue(sender.value)

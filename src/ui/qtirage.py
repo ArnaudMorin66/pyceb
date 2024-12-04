@@ -2,7 +2,7 @@ from PySide6.QtCore import QElapsedTimer, Qt
 from PySide6.QtWidgets import QApplication
 
 from ceb import CebTirage, CebStatus
-from utils import SignalBase
+from utils import Notification
 
 
 class QTirage(CebTirage):
@@ -24,15 +24,15 @@ class QTirage(CebTirage):
     Parameters:
         parent: Optional; The parent widget, if any, to which this object belongs.
     """
-    def __init__(self, parent=None):
 
-        self._signal_solve = SignalBase()
+    def __init__(self, parent=None):
+        self._notification_solve = Notification()
         self._duree = 0
         super().__init__(parent)
 
     @property
-    def signal_solve(self)-> SignalBase:
-        return self._signal_solve
+    def notification_tirage(self) -> Notification:
+        return self._notification_solve
 
     @property
     def duree(self):
@@ -58,7 +58,7 @@ class QTirage(CebTirage):
         status = super().solve()
         self._duree = timer.elapsed()
         QApplication.restoreOverrideCursor()
-        self._signal_solve.emit( status, self._duree)
+        self._notification_solve.emit()
         return status
 
     def clear(self) -> CebStatus:
@@ -77,5 +77,5 @@ class QTirage(CebTirage):
         """
         status = super().clear()
         self._duree = 0
-        self.signal_solve.emit( status, self._duree)
+        self.notification_tirage.emit()
         return status

@@ -16,7 +16,7 @@ from typing import List
 from ceb.base import CebBase
 from ceb.operation import CebOperation
 from ceb.plaque import CebPlaque, LISTEPLAQUES
-from ceb.search import CebSearch
+from ceb.search import IntSearch
 from ceb.status import CebStatus
 
 EXTENSION_METHODS = {
@@ -35,7 +35,7 @@ class CebTirage:
     """
 
     def __init__(
-            self, plaques:List[int] | None= None, search: int = 0) -> None:
+            self, plaques: List[int] | None = None, search: int = 0) -> None:
         """
             Initialise une instance de CebTirage.
 
@@ -44,7 +44,7 @@ class CebTirage:
             """
         super().__init__()
         self._plaques: List[CebPlaque] = []
-        self._obs_search: CebSearch = CebSearch(0)
+        self._search_value: IntSearch = IntSearch(0)
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
         self._status: CebStatus = CebStatus.Indefini
@@ -65,28 +65,27 @@ class CebTirage:
         """
         Attache un observateur à la valeur de recherche.
         """
-        self._obs_search.connect(observer if observer else self.data_changed)
+        self._search_value.notification.connect(observer if observer else self.data_changed)
 
-    def disconnect_search(self, observer=None):
+    def disconnect_search(self, observer:callable=None):
         """
         Détache un observateur de la valeur de recherche.
         """
-        self._obs_search.disconnect(observer if observer else self.data_changed)
-
+        self._search_value.notification.disconnect(observer if observer else self.data_changed)
 
     def connect_plaques(self):
         """
         Attache un observateur à toutes les plaques.
         """
         for plaque in self._plaques:
-            plaque.connect(self.data_changed)
+            plaque.notification.connect(self.data_changed)
 
     def disconnect_plaques(self):
         """
         Détache un observateur de toutes les plaques.
         """
         for plaque in self._plaques:
-            plaque.disconnect(self.data_changed)
+            plaque.notification.disconnect(self.data_changed)
 
     def connect_all(self):
         """
@@ -139,13 +138,13 @@ class CebTirage:
         return ", ".join(map(str, self.found))
 
     @property
-    def obs_search(self):
+    def search_value(self):
         """
         Retourne l'objet ObservableObject associé à la recherche.
 
         :return: L'objet ObservableObject associé à la recherche.
         """
-        return self._obs_search
+        return self._search_value
 
     @property
     def search(self) -> int:
@@ -154,7 +153,7 @@ class CebTirage:
 
         :return: La valeur de recherche.
         """
-        return self._obs_search.value
+        return self._search_value.value
 
     @search.setter
     def search(self, value: int):
@@ -163,7 +162,7 @@ class CebTirage:
 
         :param value: La nouvelle valeur de recherche.
         """
-        self._obs_search.value = value
+        self._search_value.value = value
 
     def random(self) -> CebStatus:
         """
@@ -286,7 +285,7 @@ class CebTirage:
 
         :return: Le statut actuel de l'objet CebTirage, soit `CebStatus.Valide` soit `CebStatus.Invalide`.
         """
-        self._status = CebStatus.Valide if 100 <= self._obs_search.value <= 999 and len(
+        self._status = CebStatus.Valide if 100 <= self._search_value.value <= 999 and len(
             self._plaques) == 6 else CebStatus.Invalide
         if self._status == CebStatus.Valide:
             for plaque in self._plaques:
@@ -295,20 +294,15 @@ class CebTirage:
                     break
         return self._status
 
-    def data_changed(self, sender, param):
+    def data_changed(self, sender,  old_value):
         """
-        Notifies the observer with the provided sender and parameter. This function
-        clears the observer's current state before processing the notification, ensuring
-        that the observer is in a default state prior to handling any new changes or
-        updates from the sender.
+        Méthode appelée lorsque les données changent.
 
-        Args:
-            sender: The source that triggered the notification. This could be any object
-            that the observer is listening to.
+        Cette méthode est déclenchée lorsqu'une valeur observable change.
+        Elle réinitialise l'état de l'objet en appelant la méthode `clear`.
 
-            param: An additional parameter providing context or information pertinent
-            to the notification. The type of this parameter depends on what kind of
-            information is relevant to the observer.
+        :param sender: L'objet qui a déclenché le changement.
+        :param old_value: L'ancienne valeur avant le changement.
         """
         self.clear()
 
@@ -329,7 +323,7 @@ class CebTirage:
         :param sol: L'opération à ajouter aux solutions.
         :return: Rien.
         """
-        diff: int = abs(sol.value - self._obs_search.value)
+        diff: int = abs(sol.value - self._search_value.value)
         if diff > self._diff:
             return
         if diff != self._diff:
@@ -363,7 +357,7 @@ class CebTirage:
         :param search: Valeur entière à rechercher.
         :return: Le statut actuel de l'objet CebTirage.
         """
-        self._obs_search.value = search
+        self._search_value.value = search
         self.plaques = plaques
         return self.solve()
 
@@ -461,7 +455,7 @@ class CebTirage:
         plaques_element = XML.SubElement(root, "plaques")
         for plaque in self.plaques:
             XML.SubElement(plaques_element, "plaque").text = str(plaque)
-        XML.SubElement(root, "search").text = str(self.obs_search)
+        XML.SubElement(root, "search").text = str(self.search)
         XML.SubElement(root, "status").text = str(self.status)
         XML.SubElement(root, "found").text = str(self.found)
         XML.SubElement(root, "ecart").text = str(self.ecart)
@@ -499,7 +493,7 @@ class CebTirage:
             writer.writerow(["Plaques", "Search", "Status", "Found", "Ecart", "Count", "Solutions"])
             writer.writerow([
                 ",".join(map(str, [k.value for k in self.plaques])),
-                self.obs_search,
+                self.search,
                 str(self.status),
                 ",".join(map(str, self.found)),
                 self.ecart,

@@ -34,8 +34,7 @@ class CebTirage:
     Tirage Plaques et Recherche
     """
 
-    def __init__(
-            self, plaques: List[int] | None = None, search: int = 0) -> None:
+    def __init__(self, plaques: List[int] | None = None, search: int = 0) -> None:
         """
             Initialise une instance de CebTirage.
 
@@ -43,15 +42,12 @@ class CebTirage:
             :param search: Valeur entière à rechercher.
             """
         super().__init__()
-        self._plaques: List[CebPlaque] = []
+        self._plaques: List[CebPlaque] = [CebPlaque(0) for _ in range(6)]
         self._search_value: IntSearch = IntSearch(0)
         self._solutions: List[CebBase] = []
         self._diff: int = maxsize
         self._status: CebStatus = CebStatus.Indefini
 
-        for _ in range(6):
-            self._plaques.append(CebPlaque(0))
-        self.search = search
         if plaques and search:
             for index, value in enumerate(plaques[:6]):
                 self._plaques[index].value = value
@@ -65,27 +61,27 @@ class CebTirage:
         """
         Attache un observateur à la valeur de recherche.
         """
-        self._search_value.notification.connect(observer if observer else self.data_changed)
+        self._search_value.event.connect(observer if observer else self.data_changed)
 
     def disconnect_search(self, observer:callable=None):
         """
         Détache un observateur de la valeur de recherche.
         """
-        self._search_value.notification.disconnect(observer if observer else self.data_changed)
+        self._search_value.event.disconnect(observer if observer else self.data_changed)
 
     def connect_plaques(self):
         """
         Attache un observateur à toutes les plaques.
         """
         for plaque in self._plaques:
-            plaque.notification.connect(self.data_changed)
+            plaque.event.connect(self.data_changed)
 
     def disconnect_plaques(self):
         """
         Détache un observateur de toutes les plaques.
         """
         for plaque in self._plaques:
-            plaque.notification.disconnect(self.data_changed)
+            plaque.event.disconnect(self.data_changed)
 
     def connect_all(self):
         """

@@ -20,7 +20,7 @@ class QComboboxPlq(QComboBox):
         super().__init__(parent)
 
         self.plaque = plaque
-        self.plaque.notification.connect(self.valueChanged)
+        self.plaque.event.connect(self.valueChanged)
 
         self.setDuplicatesEnabled(False)
         self.addItems(STRPLAQUESUNIQUES)
@@ -34,9 +34,9 @@ class QComboboxPlq(QComboBox):
 
         :param text: The text of the current item.
         """
-        self.plaque.notification.disconnect(self.valueChanged)
+        self.plaque.event.disconnect(self.valueChanged)
         self.plaque.value = int(text) if text.isdigit() else 0
-        self.plaque.notification.connect(self.valueChanged)
+        self.plaque.event.connect(self.valueChanged)
 
     # noinspection PyPep8Naming
     def valueChanged(self, sender,  old_value):
@@ -62,7 +62,7 @@ class QSpinBoxSearch(QSpinBox):
         self.setValue(search_value.value)
 
         self.valueChanged.connect(self.onvaluechanged)
-        self._search.notification.connect(self.onsearchchanged)
+        self._search.event.connect(self.onsearchchanged)
 
     def onvaluechanged(self, value: int):
         """
@@ -70,9 +70,9 @@ class QSpinBoxSearch(QSpinBox):
 
         :param value: The value of the spin box.
         """
-        self._search.notification.disconnect(self.onsearchchanged)
+        self._search.event.disconnect(self.onsearchchanged)
         self._search.value = value
-        self._search.notification.connect(self.onsearchchanged)
+        self._search.event.connect(self.onsearchchanged)
 
     def onsearchchanged(self, sender, old_value):
         with QSignalBlocker(self):

@@ -1,7 +1,7 @@
 from typing import Callable
 
 
-class Notification:
+class ObsEvent:
     """
     Classe de base pour la gestion des signaux et des observateurs.
     """

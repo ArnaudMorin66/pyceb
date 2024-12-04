@@ -4,9 +4,6 @@ from argparse import Namespace, ArgumentParser, BooleanOptionalAction
 from functools import wraps
 from typing import Callable
 
-from utils import Notification
-
-
 
 # noinspection PyUnresolvedReferences,PyIncorrectDocstring
 def parse_args() -> Namespace:

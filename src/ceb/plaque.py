@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import List, override
 
-from utils import Notification
+from utils import ObsEvent
 from .base import CebBase
 
 #: Liste des plaques disponibles
@@ -48,21 +48,28 @@ class CebPlaque(CebBase):
     """classe définissant une plaque du jeu"""
 
     def __init__(self, valeur_initiale: int = 0, observateur: callable=None):
+        """
+        Initialise une nouvelle instance de CebPlaque.
+
+        Args:
+            valeur_initiale (int): La valeur initiale de la plaque.
+            observateur (callable, optional): Une fonction de rappel pour les notifications.
+        """
         super().__init__()
-        self._notification = Notification()
+        self._event = ObsEvent()
         self._value = valeur_initiale
 
         if observateur:
-            self.notification.connect(observateur)
+            self.event.connect(observateur)
         self.operations.append(str(valeur_initiale))
 
     # noinspection PyPep8Naming
     @property
-    def notification(self):
+    def event(self):
         """
         Signal de changement de la plaque
         """
-        return self._notification
+        return self._event
 
     @property
     def is_valid(self) -> int:
@@ -74,17 +81,14 @@ class CebPlaque(CebBase):
     @override
     def set_value(self, valeur: int):
         """
-        Met à jour la valeur de la plaque.
+        Définit une nouvelle valeur pour la plaque.
 
         Args:
-            valeur (int): La nouvelle valeur de la plaque.
-
-        Raises:
-            ValueError: Si la nouvelle valeur est invalide.
+            valeur (int): La nouvelle valeur à définir pour la plaque.
         """
         if valeur == self.value:
             return
         old = self.value
         super().set_value(valeur)
         self.operations[0] = str(valeur)
-        self.notification.emit(self, old)
+        self.event.emit(self, old)

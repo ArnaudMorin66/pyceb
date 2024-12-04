@@ -1,4 +1,4 @@
-from utils import Notification
+from utils import ObsEvent
 
 
 class ObjectValue[T]:
@@ -7,7 +7,7 @@ class ObjectValue[T]:
     Émet un signal lorsque la valeur change.
     """
     _value: T
-    _notification: Notification
+    _event: ObsEvent
 
     def __init__(self, value: T | None = None):
         """
@@ -16,19 +16,19 @@ class ObjectValue[T]:
         :param value: La valeur initiale de l'objet, de type T ou None.
         """
         super().__init__()
-        self._notification = Notification()
+        self._event = ObsEvent()
         if value is not None:
             self._value = value
 
     # noinspection PyPep8Naming
     @property
-    def notification(self):
+    def event(self):
         """
         Retourne le signal de changement de la valeur.
 
         :return: Le signal de changement de la valeur.
         """
-        return self._notification
+        return self._event
 
     @property
     def value(self):
@@ -50,7 +50,7 @@ class ObjectValue[T]:
             return
         old_value = self._value
         self._value = new_value
-        self.notification.emit(self, old_value)
+        self.event.emit(self, old_value)
 
     def __repr__(self):
         """

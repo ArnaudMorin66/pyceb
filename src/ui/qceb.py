@@ -49,7 +49,7 @@ class QCeb(QWidget):
         """
         super().__init__()
         self.tirage = QTirage()  # Crée une instance de CebTirage pour gérer le tirage actuel.
-        self.tirage.notification_tirage.connect(self.update_data)  # Connecte la notification de tirage à la méthode de mise à jour des données.
+        self.tirage.event.connect(self.update_data)  # Connecte la notification de tirage à la méthode de mise à jour des données.
         self.setWindowTitle("Jeux du Compte est bon")  # Définit le titre de la fenêtre principale.
         self.setMinimumSize(800, 400)  # Définit la taille minimale de la fenêtre.
         self.tirageform_layout = QVBoxLayout()  # Crée un layout vertical pour l'interface utilisateur.
